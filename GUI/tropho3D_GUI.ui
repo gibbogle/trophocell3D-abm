@@ -1,0 +1,2297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1519</width>
+    <height>977</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ABM</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/ABM.png</normaloff>:/ABM.png</iconset>
+  </property>
+  <property name="layoutDirection">
+   <enum>Qt::LeftToRight</enum>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#tabs{
+color: white;
+background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #88d, stop: 0.1 #99e, stop: 0.49 #77c, stop: 0.5 #66b, stop: 1 #77c);
+border-width: 1px;
+border-color: #339;
+border-style: solid;
+border-radius: 15;
+}
+
+#text_more{
+padding: 8px
+}</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_5">
+    <item row="0" column="0">
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="page_input">
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QTabWidget" name="tabs">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="tabPosition">
+           <enum>QTabWidget::West</enum>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <property name="elideMode">
+           <enum>Qt::ElideNone</enum>
+          </property>
+          <widget class="QWidget" name="tab_graphs">
+           <attribute name="title">
+            <string>Graphs</string>
+           </attribute>
+           <widget class="QGroupBox" name="groupBox_graphselect">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>40</y>
+              <width>521</width>
+              <height>531</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_timeseries">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>20</y>
+              <width>161</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Time-series Plots</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_profile">
+            <property name="geometry">
+             <rect>
+              <x>270</x>
+              <y>20</y>
+              <width>111</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Profile Plots</string>
+            </property>
+           </widget>
+           <widget class="QMyCheckBox" name="checkBox_FACS_PLOT">
+            <property name="geometry">
+             <rect>
+              <x>620</x>
+              <y>20</y>
+              <width>151</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Generate FACS plots?</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="line_FACS_INTERVAL">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>620</x>
+              <y>40</y>
+              <width>31</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_FACS_INTERVAL">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>660</x>
+              <y>40</y>
+              <width>191</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>label_FACS_INTERVAL</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit_summary_interval">
+            <property name="geometry">
+             <rect>
+              <x>220</x>
+              <y>0</y>
+              <width>31</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>60</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_mins">
+            <property name="geometry">
+             <rect>
+              <x>260</x>
+              <y>0</y>
+              <width>41</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>mins</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_summary_interval">
+            <property name="geometry">
+             <rect>
+              <x>125</x>
+              <y>0</y>
+              <width>91</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Summary interval:</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit_nhistobins">
+            <property name="geometry">
+             <rect>
+              <x>620</x>
+              <y>90</y>
+              <width>31</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>20</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="alabel_nhistobins">
+            <property name="geometry">
+             <rect>
+              <x>660</x>
+              <y>90</y>
+              <width>131</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Number of histogram bins</string>
+            </property>
+           </widget>
+          </widget>
+          <widget class="QWidget" name="tab_run">
+           <attribute name="title">
+            <string>Run</string>
+           </attribute>
+           <widget class="QGroupBox" name="groupBox_run">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>10</y>
+              <width>371</width>
+              <height>471</height>
+             </rect>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="layoutWidget">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>351</width>
+               <height>451</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_4">
+              <property name="sizeConstraint">
+               <enum>QLayout::SetFixedSize</enum>
+              </property>
+              <property name="verticalSpacing">
+               <number>4</number>
+              </property>
+              <item row="13" column="2">
+               <widget class="QLineEdit" name="line_BG_FLOW_AMP">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>8</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QMyLabel" name="label_DELTA_T">
+                <property name="text">
+                 <string>label_DELTA_T</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <spacer name="horizontalSpacer_24">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLineEdit" name="line_DELTA_T">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0.25</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QMyLabel" name="label_NDAYS">
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string/>
+                </property>
+                <property name="text">
+                 <string>label_NDAYS</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QMyLabel" name="label_NX">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>NX</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <spacer name="horizontalSpacer_12">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="2">
+               <widget class="QSpinBox" name="spin_NX">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QMyLabel" name="label_DELTA_X">
+                <property name="text">
+                 <string>label_DELTA_X</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <spacer name="horizontalSpacer_13">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="line_DELTA_X">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <spacer name="horizontalSpacer_29">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="5" column="0">
+               <widget class="QMyLabel" name="label_SEED1">
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string>seed vector for RNGs</string>
+                </property>
+                <property name="text">
+                 <string>label_SEED1</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <spacer name="horizontalSpacer_30">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="5" column="2">
+               <widget class="QSpinBox" name="spin_SEED1">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>123</number>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QMyLabel" name="label_SEED2">
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string>seed vector for RNGs</string>
+                </property>
+                <property name="text">
+                 <string>label_SEED2</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <spacer name="horizontalSpacer_31">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="6" column="2">
+               <widget class="QSpinBox" name="spin_SEED2">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>456</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QLineEdit" name="line_NDAYS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QMyLabel" name="label_NT_ANIMATION">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_NT_ANIMATION</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="1">
+               <spacer name="horizontalSpacer_32">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="4" column="3">
+               <widget class="QLabel" name="units_NDAYS">
+                <property name="text">
+                 <string>days</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QLabel" name="units_DELTA_X">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <spacer name="horizontalSpacer_34">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="7" column="2">
+               <widget class="QSpinBox" name="spin_NCPU">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="label_NY">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>NY</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <spacer name="horizontalSpacer_15">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="1" column="2">
+               <widget class="QSpinBox" name="spin_NY">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QMyLabel" name="label_NLENGTH">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_NLENGTH</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <spacer name="horizontalSpacer_35">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="8" column="2">
+               <widget class="QLineEdit" name="line_NLENGTH">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>100</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QLabel" name="units_DELTA_T">
+                <property name="text">
+                 <string>min</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0">
+               <widget class="QMyLabel" name="label_DELAY">
+                <property name="text">
+                 <string>label_DELAY</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="2">
+               <widget class="QLineEdit" name="line_DELAY">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="3">
+               <widget class="QLabel" name="units_DELAY">
+                <property name="text">
+                 <string>ms</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="2">
+               <widget class="QLineEdit" name="line_NT_ANIMATION">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0">
+               <widget class="QMyLabel" name="label_BG_FLOW_AMP">
+                <property name="text">
+                 <string>label_BG_FLOW_AMP</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="1">
+               <spacer name="horizontalSpacer_33">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="13" column="1">
+               <spacer name="horizontalSpacer_36">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="7" column="0">
+               <widget class="QMyLabel" name="label_NCPU">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_NCPU</string>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="3">
+               <widget class="QLabel" name="units_BG_FLOW_AMP">
+                <property name="text">
+                 <string>um/min</string>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="0">
+               <widget class="QMyLabel" name="label_SAVE_CELL_POSITIONS">
+                <property name="text">
+                 <string>label_SAVE_CELL_POSITIONS</string>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="1">
+               <spacer name="horizontalSpacer_38">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>88</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="14" column="2">
+               <widget class="QLineEdit" name="line_SAVE_CELL_POSITIONS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QMyLabel" name="label_NRADIUS">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_NRADIUS</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <spacer name="horizontalSpacer_37">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="9" column="2">
+               <widget class="QLineEdit" name="line_NRADIUS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QMyLabel" name="label_NPLUG">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_NPLUG</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="1">
+               <spacer name="horizontalSpacer_39">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="10" column="2">
+               <widget class="QLineEdit" name="line_NPLUG">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+           <widget class="QLineEdit" name="line_DUMMY_IMAGE_BASENAME">
+            <property name="geometry">
+             <rect>
+              <x>790</x>
+              <y>270</y>
+              <width>0</width>
+              <height>20</height>
+             </rect>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_TC">
+            <property name="geometry">
+             <rect>
+              <x>400</x>
+              <y>50</y>
+              <width>251</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="layoutWidget_2">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>231</width>
+               <height>71</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_TC">
+              <item row="0" column="0">
+               <widget class="QMyLabel" name="label_MOTILITY_BETA">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>label_MOTILITY_BETA</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <spacer name="horizontalSpacer_10">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>13</width>
+                  <height>17</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLineEdit" name="line_MOTILITY_BETA">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0.5</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="label_MOTILITY_RHO">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>label_MOTILITY_RHO</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="line_MOTILITY_RHO">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0.5</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <spacer name="horizontalSpacer_11">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>13</width>
+                  <height>17</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+           <widget class="QLabel" name="alabel_motiliy">
+            <property name="geometry">
+             <rect>
+              <x>500</x>
+              <y>20</y>
+              <width>51</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Motility</string>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_chemo">
+            <property name="geometry">
+             <rect>
+              <x>400</x>
+              <y>150</y>
+              <width>271</width>
+              <height>91</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="gridLayoutWidget">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>251</width>
+               <height>71</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_chemo">
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="line_CHEMO_GRAD_AMP_1">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QMyLabel" name="label_CHEMO_GRAD_AMP_1">
+                <property name="text">
+                 <string>label_CHEMO_GRAD_AMP_1</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLineEdit" name="line_CHEMO_GRAD_AMP_2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="alabel_chemokine">
+                <property name="text">
+                 <string>Chemokine</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="alabel_chemo_1">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="alabel_chemo_2">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>2</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="alabel_used">
+                <property name="text">
+                 <string>Used</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QMyCheckBox" name="cbox_CHEMO_USED_2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>20</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::RightToLeft</enum>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QMyCheckBox" name="cbox_CHEMO_USED_1">
+                <property name="maximumSize">
+                 <size>
+                  <width>20</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::RightToLeft</enum>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+           <widget class="QLabel" name="alabel_chemo">
+            <property name="geometry">
+             <rect>
+              <x>480</x>
+              <y>130</y>
+              <width>121</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Chemokine gradient</string>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_knobs">
+            <property name="geometry">
+             <rect>
+              <x>400</x>
+              <y>270</y>
+              <width>231</width>
+              <height>101</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="gridLayoutWidget_2">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>211</width>
+               <height>80</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_knobs">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_KDRAG">
+                <property name="text">
+                 <string>Drag weight Kdrag</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <spacer name="horizontalSpacer_14">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>13</width>
+                  <height>17</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLineEdit" name="line_KDRAG">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_KADHESION">
+                <property name="text">
+                 <string>Adhesion weight Kadh</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <spacer name="horizontalSpacer_16">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>13</width>
+                  <height>17</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="line_KADHESION">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_KSTAY">
+                <property name="text">
+                 <string>Stay weight Kstay</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <spacer name="horizontalSpacer_17">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>13</width>
+                  <height>17</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="line_KSTAY">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+           <widget class="QLabel" name="alabel_knobs">
+            <property name="geometry">
+             <rect>
+              <x>500</x>
+              <y>247</y>
+              <width>41</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Knobs</string>
+            </property>
+           </widget>
+          </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="text_more">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>480</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>100</height>
+           </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
+          </property>
+          <property name="documentTitle">
+           <string/>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="page_output">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QMdiArea" name="mdiArea">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>5</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>451</width>
+            <height>500</height>
+           </size>
+          </property>
+          <property name="sizeIncrement">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+          <property name="baseSize">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Plain</enum>
+          </property>
+          <property name="tabPosition">
+           <enum>QTabWidget::North</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextBrowser" name="box_outputLog">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>451</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>200</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="page_3D">
+       <widget class="QMdiArea" name="mdiArea_VTK">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>30</y>
+          <width>900</width>
+          <height>900</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>21</width>
+          <height>391</height>
+         </rect>
+        </property>
+        <property name="value">
+         <number>24</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_hour">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>0</y>
+          <width>46</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Hour:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="hour_display">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>0</y>
+          <width>46</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+       <widget class="QWidget" name="test_page" native="true">
+        <property name="geometry">
+         <rect>
+          <x>1010</x>
+          <y>170</y>
+          <width>200</width>
+          <height>300</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_FACS">
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>410</x>
+          <y>0</y>
+          <width>141</width>
+          <height>41</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>FACS page</string>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="groupBox_FACS">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>631</width>
+          <height>411</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QGroupBox" name="groupBox_FACS_vars">
+         <property name="geometry">
+          <rect>
+           <x>500</x>
+           <y>20</y>
+           <width>111</width>
+           <height>101</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <widget class="QRadioButton" name="radioButton_CD69">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>10</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>CD69</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_S1PR1">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>30</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>S1PR1</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_avidity">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>50</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>avidity</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_stimulation">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>70</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>stimulation</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
+         </widget>
+        </widget>
+        <widget class="QFrame" name="frame">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>120</y>
+           <width>120</width>
+           <height>80</height>
+          </rect>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QMyGroupBox" name="groupBox_Histo">
+        <property name="geometry">
+         <rect>
+          <x>690</x>
+          <y>40</y>
+          <width>761</width>
+          <height>621</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <widget class="QwtPlot" name="qwtPlot_Histo">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>630</width>
+           <height>600</height>
+          </rect>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_Histo_y_vars">
+         <property name="geometry">
+          <rect>
+           <x>640</x>
+           <y>90</y>
+           <width>121</width>
+           <height>101</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_celltype">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="geometry">
+          <rect>
+           <x>640</x>
+           <y>10</y>
+           <width>120</width>
+           <height>80</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <widget class="QRadioButton" name="radioButton_celltype_1">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>10</y>
+            <width>82</width>
+            <height>18</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Cell type 1</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_celltype</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_celltype_2">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>30</y>
+            <width>82</width>
+            <height>18</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Cell type 2</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_celltype</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_celltype_3">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>50</y>
+            <width>82</width>
+            <height>18</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Both types</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_celltype</string>
+          </attribute>
+         </widget>
+        </widget>
+        <widget class="QwtPlot" name="qwtPlot_HistoLine">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>630</width>
+           <height>600</height>
+          </rect>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_histotype">
+         <property name="geometry">
+          <rect>
+           <x>640</x>
+           <y>549</y>
+           <width>81</width>
+           <height>61</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <widget class="QRadioButton" name="radioButton_histotype_1">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>10</y>
+            <width>61</width>
+            <height>18</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Bar plot</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_histotype</string>
+          </attribute>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_histotype_2">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>30</y>
+            <width>61</width>
+            <height>18</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Line plot</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_histotype</string>
+          </attribute>
+         </widget>
+        </widget>
+        <widget class="QCheckBox" name="checkBox_histo_logscale">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="geometry">
+          <rect>
+           <x>650</x>
+           <y>520</y>
+           <width>131</width>
+           <height>18</height>
+          </rect>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>Log scale?</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="alabel__Histo">
+        <property name="geometry">
+         <rect>
+          <x>960</x>
+          <y>0</y>
+          <width>141</width>
+          <height>41</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Histogram</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1519</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="action_open_input"/>
+    <addaction name="action_load_results"/>
+    <addaction name="separator"/>
+    <addaction name="action_save"/>
+    <addaction name="action_saveAs"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuABM">
+    <property name="title">
+     <string>ABM</string>
+    </property>
+    <addaction name="action_run"/>
+    <addaction name="action_pause"/>
+    <addaction name="action_stop"/>
+   </widget>
+   <widget class="QMenu" name="menuGraphs">
+    <property name="title">
+     <string>Graphs</string>
+    </property>
+    <addaction name="action_add_graph"/>
+    <addaction name="action_remove_graph"/>
+    <addaction name="action_remove_all"/>
+   </widget>
+   <widget class="QMenu" name="menuPlayer">
+    <property name="title">
+     <string>Player</string>
+    </property>
+    <addaction name="action_play_VTK"/>
+    <addaction name="action_set_speed"/>
+   </widget>
+   <widget class="QMenu" name="menuSnapshot">
+    <property name="title">
+     <string>Snapshot</string>
+    </property>
+    <addaction name="action_save_snapshot"/>
+   </widget>
+   <widget class="QMenu" name="menuChemokine">
+    <property name="title">
+     <string>Chemokine</string>
+    </property>
+    <addaction name="actionShow_3D_gradient_field"/>
+    <addaction name="actionShow_2D_gradient_field"/>
+   </widget>
+   <widget class="QMenu" name="menuMovie">
+    <property name="title">
+     <string>Movie</string>
+    </property>
+    <addaction name="actionStart_recording_VTK"/>
+    <addaction name="actionStop_recording_VTK"/>
+    <addaction name="actionStart_recording_FACS"/>
+    <addaction name="actionStop_recording_FACS"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuABM"/>
+   <addaction name="menuGraphs"/>
+   <addaction name="menuPlayer"/>
+   <addaction name="menuSnapshot"/>
+   <addaction name="menuChemokine"/>
+   <addaction name="menuMovie"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_run"/>
+   <addaction name="action_pause"/>
+   <addaction name="action_stop"/>
+   <addaction name="separator"/>
+   <addaction name="action_inputs"/>
+   <addaction name="action_outputs"/>
+   <addaction name="action_VTK"/>
+   <addaction name="action_FACS"/>
+  </widget>
+  <action name="action_saveAs">
+   <property name="text">
+    <string>Save &amp;As</string>
+   </property>
+  </action>
+  <action name="action_save">
+   <property name="text">
+    <string>&amp;Save</string>
+   </property>
+  </action>
+  <action name="action_open_input">
+   <property name="text">
+    <string>&amp;Open input</string>
+   </property>
+   <property name="iconText">
+    <string>Open input</string>
+   </property>
+   <property name="toolTip">
+    <string>Open input file</string>
+   </property>
+  </action>
+  <action name="action_stop">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/001_29.png</normaloff>:/icons/001_29.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop ABM</string>
+   </property>
+   <property name="shortcut">
+    <string>F6</string>
+   </property>
+  </action>
+  <action name="action_run">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/001_59.png</normaloff>:/icons/001_59.png</iconset>
+   </property>
+   <property name="text">
+    <string>Run</string>
+   </property>
+   <property name="toolTip">
+    <string>Run ABM</string>
+   </property>
+  </action>
+  <action name="action_inputs">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/001_45.png</normaloff>:/icons/001_45.png</iconset>
+   </property>
+   <property name="text">
+    <string>Inputs</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to the Inputs</string>
+   </property>
+  </action>
+  <action name="action_outputs">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/Display2.png</normaloff>:/icons/Display2.png</iconset>
+   </property>
+   <property name="text">
+    <string>Outputs</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to the Outputs</string>
+   </property>
+  </action>
+  <action name="action_VTK">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/cell2.png</normaloff>:/icons/cell2.png</iconset>
+   </property>
+   <property name="text">
+    <string>Animation</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to animation</string>
+   </property>
+  </action>
+  <action name="action_pause">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/001_07.png</normaloff>:/icons/001_07.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="action_load_results">
+   <property name="text">
+    <string>&amp;Load results</string>
+   </property>
+   <property name="iconText">
+    <string>Load results</string>
+   </property>
+   <property name="toolTip">
+    <string>Load result file</string>
+   </property>
+  </action>
+  <action name="action_add_graph">
+   <property name="text">
+    <string>Add graph</string>
+   </property>
+  </action>
+  <action name="action_remove_graph">
+   <property name="text">
+    <string>Remove graph</string>
+   </property>
+  </action>
+  <action name="action_remove_all">
+   <property name="text">
+    <string>Remove all</string>
+   </property>
+  </action>
+  <action name="action_play_VTK">
+   <property name="text">
+    <string>Play cell animation</string>
+   </property>
+  </action>
+  <action name="action_set_speed">
+   <property name="text">
+    <string>Set speed</string>
+   </property>
+  </action>
+  <action name="action_save_snapshot">
+   <property name="text">
+    <string>Save snapshot</string>
+   </property>
+  </action>
+  <action name="actionShow_3D_gradient_field">
+   <property name="text">
+    <string>Show 3D gradient field</string>
+   </property>
+  </action>
+  <action name="actionShow_2D_gradient_field">
+   <property name="text">
+    <string>Show 2D gradient field</string>
+   </property>
+  </action>
+  <action name="actionStart_recording_VTK">
+   <property name="text">
+    <string>Start recording 3D</string>
+   </property>
+  </action>
+  <action name="actionStop_recording_VTK">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop recording 3D</string>
+   </property>
+  </action>
+  <action name="action_FACS">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/FACS_234.png</normaloff>:/icons/FACS_234.png</iconset>
+   </property>
+   <property name="text">
+    <string>FACS</string>
+   </property>
+  </action>
+  <action name="actionStart_recording_FACS">
+   <property name="text">
+    <string>Start recording FACS</string>
+   </property>
+  </action>
+  <action name="actionStop_recording_FACS">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop recording FACS</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QwtPlot</class>
+   <extends>QFrame</extends>
+   <header>qwt_plot.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QMyLabel</class>
+   <extends>QLabel</extends>
+   <header>qmylabel.h</header>
+   <slots>
+    <signal>mouseClick()</signal>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>QMyCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header location="global">qmycheckbox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QMyGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header location="global">qmylabel.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>spin_NX</tabstop>
+  <tabstop>line_DELTA_X</tabstop>
+  <tabstop>line_DELTA_T</tabstop>
+  <tabstop>line_NDAYS</tabstop>
+  <tabstop>spin_SEED1</tabstop>
+  <tabstop>spin_SEED2</tabstop>
+ </tabstops>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
+ <connections/>
+ <slots>
+  <slot>on_rbut_ACTIVATION_MODE_0_toggled(bool)</slot>
+  <slot>on_line_SPECIAL_CASE_textEdited(QString)</slot>
+  <slot>on_cbox_record_toggled(bool)</slot>
+ </slots>
+ <buttongroups>
+  <buttongroup name="buttonGroup_histotype"/>
+  <buttongroup name="buttonGroup_celltype"/>
+  <buttongroup name="buttonGroup_FACS_PLOT"/>
+ </buttongroups>
+</ui>

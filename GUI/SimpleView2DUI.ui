@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SimpleView2D</class>
+ <widget class="QMainWindow" name="SimpleView2D">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>768</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SimpleView</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QVTKWidget" name="qvtkWidget_gradient" native="true">
+    <property name="geometry">
+     <rect>
+      <x>7</x>
+      <y>7</y>
+      <width>768</width>
+      <height>768</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_plot">
+    <property name="geometry">
+     <rect>
+      <x>830</x>
+      <y>660</y>
+      <width>191</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>Plotting parameters:</string>
+    </property>
+    <widget class="QLabel" name="label_plane">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>171</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Slice plane</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_fraction">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>171</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Slice fraction</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_scaling">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>171</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Vector scaling</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_strength">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>171</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Use strength</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_chemokine">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>10</y>
+      <width>121</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>Chemokines:</string>
+    </property>
+    <widget class="QCheckBox" name="checkBox_CCL3">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>80</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>CCL3/4</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_other">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>80</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Other</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="pushButton_saveImage">
+    <property name="geometry">
+     <rect>
+      <x>920</x>
+      <y>120</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Save Image</string>
+    </property>
+   </widget>
+  </widget>
+  <action name="actionOpenFile">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Open File...</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionPrint">
+   <property name="text">
+    <string>Print</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKWidget</class>
+   <extends>QWidget</extends>
+   <header>QVTKWidget.h</header>
+   <slots>
+    <slot>stateChanged_CheckBox_CCL21()</slot>
+   </slots>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButton_saveImage</sender>
+   <signal>clicked()</signal>
+   <receiver>SimpleView2D</receiver>
+   <slot>saveImage()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>935</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>362</x>
+     <y>-3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_CCL3</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>SimpleView2D</receiver>
+   <slot>stateChanged_CheckBox_CCL3()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>941</x>
+     <y>36</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>823</x>
+     <y>269</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_other</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>SimpleView2D</receiver>
+   <slot>stateChange_CheckBox_other()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>957</x>
+     <y>60</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>800</x>
+     <y>114</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>saveImage()</slot>
+  <slot>stateChanged_CheckBox_CCL3()</slot>
+  <slot>stateChange_CheckBox_other()</slot>
+ </slots>
+</ui>

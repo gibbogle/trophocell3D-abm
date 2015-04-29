@@ -1,0 +1,467 @@
+Comparing files misc.cpp and MISC_OLD.CPP
+***** misc.cpp
+
+#include "libspheroid.h"
+
+***** MISC_OLD.CPP
+
+#include "libpara32.h"
+
+*****
+
+***** misc.cpp
+char msg[2048];
+
+***** MISC_OLD.CPP
+char msg[2048];
+bool alldone;
+
+class SleeperThread : public QThread
+{
+public:
+    static void msleep(unsigned long msecs)
+    {
+        QThread::msleep(msecs);
+    }
+};
+
+*****
+
+***** misc.cpp
+                if (stopped) {
+                        LOG_MSG("SocketHandler::processor: stopped!");
+                        break;
+***** MISC_OLD.CPP
+                if (stopped) {
+                        LOG_MSG("Stopped!");
+                        break;
+*****
+
+***** misc.cpp
+
+
+//-----------------------------------------------------------------------------------------
+***** MISC_OLD.CPP
+
+//-----------------------------------------------------------------------------------------
+*****
+
+***** misc.cpp
+{
+        LOG_MSG("Invoking DLL...");
+        int res=0;
+    int nsumm_interval, hour;
+        const char *infile, *outfile;
+***** MISC_OLD.CPP
+{
+    int res = 0;
+        const char *infile, *outfile;
+*****
+
+***** misc.cpp
+        QString infile_path, outfile_path;
+        int len_infile, len_outfile;
+    bool cused[16];
+
+        infile_path = inputFile;
+        QString casename = QFileInfo(inputFile).baseName();
+***** MISC_OLD.CPP
+        QString infile_path, outfile_path;
+    int len_infile, len_outfile, k;
+    bool record;
+    bool first = true;
+
+    LOG_MSG("Invoking DLL...");
+    infile_path = inputFile;
+        QString casename = QFileInfo(inputFile).baseName();
+*****
+
+***** misc.cpp
+        std::string std_outfile = outfile_path.toStdString();
+    outfile = std_outfile.c_str();
+
+        paused = false;
+        execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
+    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused, &dfraction);
+    emit setupC(MAX_CHEMO, cused);
+    nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
+//      sprintf(msg,"exthread: nsteps: %d",nsteps);
+***** MISC_OLD.CPP
+        std::string std_outfile = outfile_path.toStdString();
+        outfile = std_outfile.c_str();
+
+    alldone = false;
+        paused = false;
+    record = false;
+//      LOG_MSG("execute called");
+        execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
+//      LOG_MSG("execute returned");
+        get_dimensions(&NX,&NY,&NZ);
+//      sprintf(msg,"exthread: nsteps: %d",nsteps);
+*****
+
+***** misc.cpp
+//      LOG_MSG(msg);
+
+    conc_nc = 0;
+    hour = 0;
+
+    mutex1.lock();
+    get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
+    mutex1.unlock();
+    emit summary(hour);         // Emit signal to initialise summary plots
+    summary_done.wait(&mutex3);
+//    wait_to_go();
+
+    for (int i=1; i <= nsteps+1; i++) {
+                bool updated = false;
+                if (paused && !updated) {
+                        snapshot();
+            sprintf(msg,"got snapshot: i: %d",i);
+            LOG_MSG(msg);
+            updated = true;
+                }
+***** MISC_OLD.CPP
+//      LOG_MSG(msg);
+        mutex1.lock();
+        get_summary(summaryData);
+    getProfiles();
+    mutex1.unlock();
+        emit summary();         // Emit signal to update summary plots
+
+        for (int i=1; i<= nsteps; i++) {
+                bool updated = false;
+        if (recordfrom >= 0 && i >= recordfrom-1 && i <= recordto) {
+            record = true;
+            LOG_MSG("record = true");
+            if (first) {
+                first = false;
+                emit(action_VTK());
+            }
+        } else {
+            record = false;
+        }
+                if (paused && !updated) {
+            snapshot(record);
+                        updated = true;
+                }
+*****
+
+***** misc.cpp
+                while(paused || leftb) {
+            sleep(100);
+                }
+        if (stopped) {
+            res = -1;
+            break;
+        }
+
+        simulate_step(&res);
+        if (res != 0) {
+            LOG_MSG("simulate_step: error: res != 0");
+            break;
+        }
+
+        if (i%nsumm_interval == 0) {
+                        mutex1.lock();
+            get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
+            get_concdata(&conc_nc, &conc_dx, concData);
+            get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
+            get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
+            if (showingFACS || recordingFACS) {
+                getFACS();
+            }
+            mutex1.unlock();
+            hour++;
+            emit summary(hour);         // Emit signal to update summary plots, at hourly intervals
+            summary_done.wait(&mutex3);
+            if (showingFACS || recordingFACS) {
+                emit facs_update();
+            }
+        }
+
+        if (stopped) {
+            res = -1;
+            break;
+        }
+        if (i%nt_vtk == 0) {
+            if (showingVTK || recordingVTK) {
+                                snapshot();
+                istep = i;
+                sleep(10);
+                        }
+***** MISC_OLD.CPP
+                while(paused || leftb) {
+                        Sleep(100);
+                }
+                if (stopped) break;
+                simulate_step(&res);
+                if (res == 1) break;
+                if (stopped) break;
+        if (i%summary_interval == 0) {
+                        mutex1.lock();
+                        get_summary(summaryData);
+            getProfiles();
+            getFACS();
+            mutex1.unlock();
+                        emit summary();         // Emit signal to update summary plots, at hourly intervals
+            emit facs_update();
+                }
+                if (stopped) break;
+                if (i%nt_vtk == 0) {
+            if (record || showingVTK != 0) {
+                if (showingVTK != 0) LOG_MSG("showingVTK != 0");
+                snapshot(record);
+                                Sleep(10);
+                        }
+*****
+
+***** misc.cpp
+                }
+        if (stopped) {
+            res = -1;
+            break;
+        }
+    }
+    LOG_MSG("ExecThread::run: stopped or completed");
+    snapshot();
+    LOG_MSG("got snapshot:");
+    sleep(100);
+        LOG_MSG("ExecThread::run: call terminate_run");
+        terminate_run(&res);
+
+        return;
+***** MISC_OLD.CPP
+                }
+                if (stopped) break;
+        }
+    alldone = true;
+    snapshot(record);
+        Sleep(10);
+        terminate_run(&res);
+        return;
+*****
+
+***** misc.cpp
+
+/*
+//-----------------------------------------------------------------------------------------
+***** MISC_OLD.CPP
+
+//-----------------------------------------------------------------------------------------
+*****
+
+***** misc.cpp
+//-----------------------------------------------------------------------------------------
+void ExecThread::wait_to_go()
+{
+    for (;;) {
+        sprintf(msg,"waiting");
+        if (goflag || stopped) break;
+    }
+***** MISC_OLD.CPP
+//-----------------------------------------------------------------------------------------
+void ExecThread::snapshot(bool record)
+{
+    int nTC_size, nDC_size, nbond_size;
+
+    mutex2.lock();
+//    get_scene_dimensions(&nTC_size,&nDC_size,&nbond_size);
+//    sprintf(msg,"nTC_size, nDC_size, nbond_size: %d %d %d",nTC_size, nDC_size, nbond_size);
+//    LOG_MSG(msg);
+    get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
+//    LOG_MSG("got scene");
+    if (nTC_list > MAX_TC) {
+                LOG_MSG("Error: MAX_TC exceeded");
+                exit(1);
+        }
+        if (nDC_list > MAX_DC) {
+                LOG_MSG("Error: MAX_DC exceeded");
+                exit(1);
+        }
+        if (nbond_list > MAX_BOND) {
+                LOG_MSG("Error: MAX_BOND exceeded");
+                exit(1);
+        }
+
+    mutex2.unlock();
+
+//    emit display(record); // Emit signal to update VTK display
+
+    if (showingVTK) {
+        emit display(record); // Emit signal to update VTK display
+    }
+*****
+
+***** misc.cpp
+}
+*/
+
+***** MISC_OLD.CPP
+}
+
+*****
+
+***** misc.cpp
+//-----------------------------------------------------------------------------------------
+// Note that storage for BC_list, DC_list, bond_list is provided in the GUI code
+// (see mainwindow.cpp and transfer.h).  The DLL fills in the data, and the number of elements
+// in the lists is returned in nBC_list, nDC_list, nbond_list.
+//-----------------------------------------------------------------------------------------
+void ExecThread::snapshot()
+{
+    mutex2.lock();
+    get_scene(&ncell_list,cell_list);
+    if (ncell_list > MAX_CELLS) {
+        LOG_MSG("Error: MAX_CELLS exceeded");
+        exit(1);
+    }
+    mutex2.unlock();
+//    emit displayF(); // Emit signal to update Field display
+    emit display(); // Emit signal to update VTK display
+}
+***** MISC_OLD.CPP
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::getProfiles()
+{
+    int k;
+
+    k = PROFILE_CD69;
+    get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_S1PR1;
+    get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_CFSE;
+    get_profile_cfse(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_STIM;
+    get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_STIMRATE;
+    get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_AVIDITY_LN;
+    get_profile_avidity_ln(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_AVIDITY_PER;
+    get_profile_avidity_per(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_GENERATION_LN;
+    get_profile_generation_ln(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_FIRSTDCCONTACTTIME;
+    get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_DCBINDTIME;
+    get_profile_dcbindtime(profile_x[k],profile_y[k],&profile_n[k]);
+}
+*****
+
+***** misc.cpp
+//-----------------------------------------------------------------------------------------
+void ExecThread::saveGradient2D(int i)
+{
+    LOG_QMSG("saveGradient2D");
+    paused = true;
+    SimpleView2D *sv2D = new SimpleView2D();
+    sv2D->makeFrame(i);
+    paused = false;
+    delete sv2D;
+}
+***** MISC_OLD.CPP
+//-----------------------------------------------------------------------------------------
+void ExecThread::getFACS()
+{
+    get_nfacs(&nFACS_cells);
+    if (!FACS_data || nFACS_cells*nFACS_vars > nFACS_dim) {
+        if (FACS_data) free(FACS_data);
+        nFACS_dim = 3*nFACS_cells*nFACS_vars;
+        FACS_data = (double *)malloc(nFACS_dim*sizeof(double));
+    }
+    get_facs(FACS_data);
+}
+*****
+
+***** misc.cpp
+//-----------------------------------------------------------------------------------------
+void ExecThread::getFACS()
+{
+    get_nfacs(&nFACS_cells);
+    if (!FACS_data || nFACS_cells*nFACS_vars > nFACS_dim) {
+        if (FACS_data) free(FACS_data);
+        nFACS_dim = 3*nFACS_cells*nFACS_vars;
+        FACS_data = (double *)malloc(nFACS_dim*sizeof(double));
+    }
+    get_facs(FACS_data);
+//    sprintf(msg,"getFACS: nFACS_cells = %d",nFACS_cells);
+//    LOG_MSG(msg);
+}
+***** MISC_OLD.CPP
+//-----------------------------------------------------------------------------------------
+void ExecThread::stop()
+{
+        stopped = true;
+}
+*****
+
+***** misc.cpp
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::stop()
+{
+        stopped = true;
+        LOG_MSG("ExecThread::stop: stopped");
+}
+***** MISC_OLD.CPP
+
+        //-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::pause()
+{
+        paused = true;
+}
+*****
+
+***** misc.cpp
+
+        //-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::pause()
+{
+        paused = true;
+}
+***** MISC_OLD.CPP
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::unpause()
+{
+        paused = false;
+}
+*****
+
+***** misc.cpp
+//-----------------------------------------------------------------------------------------
+void ExecThread::unpause()
+{
+        paused = false;
+}
+***** MISC_OLD.CPP
+//-----------------------------------------------------------------------------------------
+bool quitMessage(QString msg)
+{
+        if (msg.contains("__EXIT__",Qt::CaseSensitive))
+                return true;
+        else
+                return false;
+}
+*****
+
+***** misc.cpp
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+bool quitMessage(QString msg)
+{
+        if (msg.contains("__EXIT__",Qt::CaseSensitive))
+                return true;
+        else
+                return false;
+}
+***** MISC_OLD.CPP
+*****
+
