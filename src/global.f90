@@ -3,6 +3,7 @@
 
 module global
 
+use real_kind_mod
 use omp_lib
 !use CD69
 !use IL2
@@ -14,8 +15,8 @@ use winsock
 implicit none
 
 !INTEGER, PARAMETER :: DP = SELECTED_REAL_KIND( 12, 60 )
-integer, parameter :: SP = kind(1.0), DP = kind(1.0d0)
-integer, parameter :: REAL_KIND = SP
+!integer, parameter :: SP = kind(1.0), DP = kind(1.0d0)
+!integer, parameter :: REAL_KIND = SP
 
 ! Files
 integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nftraffic = 16, nfrun = 17, &
@@ -51,15 +52,25 @@ integer, parameter :: CHEMO_2 = 2
 
 integer, parameter :: NCTYPES = 1
 integer, parameter :: TROPHO_CELL = 1
+integer, parameter :: MAX_CELLTYPES = 2
+integer, parameter :: MAX_NBRS = 100
+
+integer, parameter :: ALIVE = 0
+integer, parameter :: DEAD = 1
+integer, parameter :: TERMINAL_MITOSIS   = 1
+integer, parameter :: CONTINUOUS_MITOSIS = 2
+integer, parameter :: MITOSIS_MODE = TERMINAL_MITOSIS
 
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 real(REAL_KIND), parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
 
 real(REAL_KIND), parameter :: BIG_TIME = 100000
+real(REAL_KIND), parameter :: small_d = 0.1e-4		! 0.1 um -> cm
 logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals
 logical, parameter :: save_input = .true.
 
 integer, parameter :: NZ_2D = 1
+integer, parameter :: ndt_max = 30
 
 ! Diffusion parameters
 logical, parameter :: use_cytokines = .false.       ! to use IL-2
@@ -122,9 +133,27 @@ integer :: NTcells
 integer :: Nsites
 real (REAL_KIND) :: InflowTotal
 
+type neighbour_type
+	integer :: indx
+!	logical :: incontact
+	logical*1 :: contact(2,2)
+end type
+
 type cell_type
     integer :: ID
+	integer :: state
     integer :: site(3)
+	logical :: Iphase
+    integer :: nspheres             ! =1 for Iphase, =2 for Mphase
+	real(REAL_KIND) :: V			! actual volume (um3) -> cm3
+	real(REAL_KIND) :: dVdt
+	real(REAL_KIND) :: radius(2)	! sphere radii (um) -> cm
+	real(REAL_KIND) :: centre(3,2)  ! sphere centre positions
+	real(REAL_KIND) :: d			! centre separation distance (um) -> cm
+	real(REAL_KIND) :: birthtime
+	real(REAL_KIND) :: mitosis		! level of mitosis (0 - 1)
+	real(REAL_KIND) :: V_divide
+	real(REAL_KIND) :: d_divide		! centre separation distance at the end of mitosis
     integer :: step
 	real(REAL_KIND) :: receptor_level(MAX_RECEPTOR)
 	real(REAL_KIND) :: receptor_saturation_time(MAX_RECEPTOR)
@@ -134,6 +163,8 @@ type cell_type
     integer(2) :: ctype
 	integer(2) :: lastdir
 	integer :: dtotal(3)
+	integer :: nbrs
+	type(neighbour_type) :: nbrlist(100)
 end type
 
 type occupancy_type
@@ -197,6 +228,7 @@ integer :: FACS_INTERVAL				! interval between FACs plot outputs (h)
 logical, parameter :: SIMULATE_2D = .false.
 integer :: NX, NY, NZ, Ncells
 integer :: nlength, nradius, nplug
+integer :: ndt
 !integer, allocatable :: xdomain(:),xoffset(:),zdomain(:),zoffset(:)
 !integer :: blobrange(3,2)
 real(REAL_KIND) :: Radius0
@@ -205,6 +237,9 @@ real(REAL_KIND) :: TagRadius
 real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real(REAL_KIND) :: Centre(3)
 real(REAL_KIND) :: Vc, Ve
+
+real(REAL_KIND) :: Raverage
+real(REAL_KIND) :: tube_radius, tube_length, plug_zmin, plug_zmax, plug_hmax
 
 ! Motility data
 real(REAL_KIND) :: DELTA_T       ! minutes
@@ -224,7 +259,12 @@ integer :: n_cell_positions
 
 real(REAL_KIND) :: Vmax
 real(REAL_KIND) :: chemo_attraction
-real(REAL_KIND) :: Kdrag, Kadhesion, Kstay
+real(REAL_KIND) :: Kadhesion, Kstay	!,Kdrag
+
+! Force parameters
+real(REAL_KIND) :: a_separation, kdrag, frandom
+real(REAL_KIND) :: a_force, b_force, c_force, x0_force, x1_force, xcross1_force, xcross2_force
+real(REAL_KIND) :: t_fmover, delta_tmove, dt_min, delta_min, delta_max
 
 ! Chemotaxis data
 integer, parameter :: chemo_N = 2
@@ -239,6 +279,7 @@ type(cell_type), allocatable, target :: cell_list(:)
 type(source_type), allocatable :: sourcelist(:)
 integer :: nsources
 integer, allocatable :: gaplist(:)
+integer, allocatable :: perm_index(:)
 !integer, allocatable :: zrange2D(:,:,:)	! for 2D case
 integer :: lastID, nlist, n2Dsites, ngaps, ntaglimit, ntagged=0, ntagged_left
 integer :: lastNTcells, k_nonrandom(2)
@@ -246,6 +287,14 @@ integer :: max_nlist, max_ngaps
 integer :: nleft
 integer :: nadd_sites, ndivisions
 real(REAL_KIND) :: lastbalancetime
+
+real(REAL_KIND) :: alpha_v, k_detach
+real(REAL_KIND) :: dr_mitosis, mitosis_hours, mitosis_duration
+real(REAL_KIND) :: Vdivide0, dVdivide, Rdivide0, MM_THRESHOLD, medium_volume0, total_volume
+real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), celltype_fraction(MAX_CELLTYPES)
+type(dist_type) :: divide_dist(MAX_CELLTYPES)
+real(REAL_KIND) :: d_nbr_limit
+
 
 integer :: noutflow_tag, ninflow_tag
 logical :: firstSummary
@@ -264,6 +313,7 @@ TYPE(winsockport) :: awp_0, awp_1, awp_2, awp_3
 logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
+logical :: use_hysteresis = .false.
 
 logical :: dbug = .false.
 
@@ -292,6 +342,18 @@ if (R < -2147483647) R = par_shr3(kpar)
 k = abs(R)
 random_int = n1 + mod(k,(n2-n1+1))
 end function
+
+!-----------------------------------------------------------------------------------------
+! This needs to be given radial symmetry
+!-----------------------------------------------------------------------------------------
+subroutine get_random_dr(dr)
+real(REAL_KIND) :: dr(3)
+integer :: kpar=0
+
+dr(1) = 2*(par_uni(kpar) - 0.5)
+dr(2) = 2*(par_uni(kpar) - 0.5)
+dr(3) = 2*(par_uni(kpar) - 0.5)
+end subroutine
 
 !--------------------------------------------------------------------------------
 ! Returns a permutation of the elements of a()

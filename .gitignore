@@ -1,0 +1,16 @@
+build
+CMakeFiles
+execution
+/build-cb/tropho3D-abm.layout
+/build-cb/winsock.mod
+/build-cb/par_zig_mod.mod
+/build-cb/tropho_mod.mod
+/build-cb/tropho3D-abm.cbp
+/tropho3D_GUI-build/ui_SimpleView2DUI.h
+/tropho3D_GUI-build/ui_SimpleView3DUI.h
+/tropho3D_GUI-build/ui_tropho3D_GUI.h
+/tropho3D_GUI-build/Makefile
+/tropho3D_GUI-build/Makefile.Debug
+/tropho3D_GUI-build/Makefile.Release
+tropho3D_GUI-build
+build-cb

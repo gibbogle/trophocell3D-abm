@@ -2,6 +2,7 @@
 module behaviour
 
 use global
+use packer
 use motility
 
 implicit none
@@ -13,7 +14,7 @@ integer, parameter :: CONSTANT_DIST    = 4
 
 integer, parameter :: Nbindtime_nc = 10
 
-type(dist_type), allocatable :: stage_dist(:,:,:), life_dist(:), divide_dist(:)
+type(dist_type), allocatable :: stage_dist(:,:,:), life_dist(:)	!, divide_dist(:)
 
 contains
 
@@ -144,9 +145,12 @@ read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! # of processors - not used at the moment
-read(nfcell,*) nlength						! length of tube (grids)
-read(nfcell,*) nradius						! radius of tube (grids)
-read(nfcell,*) nplug						! length of plug (grids)
+read(nfcell,*) tube_length					! length of tube (um)
+read(nfcell,*) tube_radius					! radius of tube (um)
+read(nfcell,*) plug_zmin					! plug z from (um)
+read(nfcell,*) plug_zmax					! plug z to (um)
+read(nfcell,*) plug_hmax					! plug height (um)
+read(nfcell,*) Raverage						! average cell radius (um)
 read(nfcell,*) ntgui						! interval between GUI outputs (timesteps)
 read(nfcell,*) idelay						! simulation step delay (ms)
 read(nfcell,*) ichemo_1
@@ -561,10 +565,68 @@ write(*,*) 'mean = ',sum/N
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! Possible cell locations are in a close-packed rectangular block.  Locations outside the
+! cylindrical vessel are eliminated, then cells in the assumed pre-existing gap are
+! eliminated.
+!
+! The origin is at the centre of the tube, at the placenta end.
+! The Z axis is along the tube centre-line.
+!
+! Tube dimensions:
+!	radius = tube_radius (um)
+!	length = tube_length (um)
+! Plug dimensions:
+!	from   = plug_zmin (um)
+!	to     = plug_zmax (um)
+!	height = plug_hmax (um)
+!-----------------------------------------------------------------------------------------
+subroutine PlaceCells(ok)
+logical :: ok
+integer :: kcell, i, ix, iy, iz, nxx, nyy, nzz
+real(REAL_KIND) :: cellradius, xrng, zrng, z0, dz, u, h
+real(REAL_KIND) :: centre(3), rsite(3), block_centre(3), plug_centre(3)
+
+z0 = (plug_zmax + plug_zmin)/2
+xrng = tube_radius
+zrng = plug_zmax - plug_zmin
+dz = zrng/2
+plug_centre = [0.d0, 0.d0, z0]
+cellradius = Raverage
+nxx = 1.2*xrng/cellradius
+nzz = (1.5*dz)/cellradius
+nyy = 1.3*nxx
+call SelectCellLocations(nxx, nyy, nzz, cellradius, block_centre)
+
+write(nflog,*) 'nxx,nyy,nzz: ',nxx,nyy,nzz
+write(nflog,'(a,3f8.1)') 'plug_centre: ',plug_centre
+write(nflog,'(a,3f8.1)') 'block_centre: ',block_centre
+kcell = 0
+do i = 1,nxx*nyy*nzz
+	if (cdist(i)+cellradius > tube_radius) cycle
+	ix = xyz_lookup(i)%x
+	iy = xyz_lookup(i)%y
+	iz = xyz_lookup(i)%z
+	centre = cloc(ix,iy,iz)%centre - block_centre + plug_centre
+	if (centre(3) < plug_zmin .or. centre(3) > plug_zmax) cycle
+	u = centre(3) - z0
+	h = (1 + cos(u*PI/dz))*plug_hmax/2
+	if (cdist(i) < tube_radius - h) cycle
+	kcell = kcell + 1
+	rsite = centre
+	write(nflog,'(2i6,3i4,3f8.1)') kcell,i,ix,iy,iz,rsite
+!	call AddCell(kcell,rsite)
+enddo
+call FreeCellLocations
+nlist = kcell
+ncells = kcell
+stop
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 ! Initial cell position data is loaded into occupancy() and cell_list().
 ! The 
 !-----------------------------------------------------------------------------------------
-subroutine PlaceCells(ok)
+subroutine PlaceCells_old(ok)
 logical :: ok
 integer :: x, y, z, kcell, site(3)
 integer :: gen, tag, region, ctype

@@ -9,6 +9,9 @@
 module tropho_mod
 use global
 use behaviour
+use packer
+use nbr
+use fmotion
 !use diffuse
 !use ode_diffuse_general
 !use ode_diffuse_secretion
@@ -1034,8 +1037,6 @@ endif
 call sleeper(2)
 end subroutine
 
-
-
 !-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run.
 ! ncpu = the number of processors to use
@@ -1048,6 +1049,7 @@ integer :: ncpu
 character*(*) :: infile, outfile
 logical :: ok
 character*(64) :: msg
+real(REAL_KIND) :: epsilon, es_e, shift, sqr_es_e, k_v
 integer :: error
 
 ok = .true.
@@ -1096,6 +1098,14 @@ else
 endif
 if (.not.ok) return
 
+! For cell-cell force hysteresis
+alpha_v = 0.25
+epsilon = 7.5
+es_e = 1
+shift = -6
+sqr_es_e = sqrt(es_e)
+k_v = 2/alpha_v - sqr_es_e + sqrt(es_e - shift/epsilon)
+k_detach = k_v*alpha_v/2
 
 !call make_split(.true.)
 call init_counters
@@ -1207,27 +1217,8 @@ endif
 ierr = 0
 if (allocated(gaplist)) deallocate(gaplist,stat=ierr)
 if (allocated(life_dist)) deallocate(life_dist)
-if (allocated(divide_dist)) deallocate(divide_dist)
+!if (allocated(divide_dist)) deallocate(divide_dist)
 if (allocated(chemo_p)) deallocate(chemo_p)
-
-#if (0)
-if (allocated(cytp)) deallocate(cytp)
-if (allocated(xminmax)) deallocate(xminmax)
-if (allocated(inblob)) deallocate(inblob)
-if (allocated(sitelist)) deallocate(sitelist)
-if (allocated(neighbours)) deallocate(neighbours)
-do ic = 1,MAX_CHEMO
-	if (allocated(chemo(ic)%conc)) then
-		deallocate(chemo(ic)%conc)
-		deallocate(chemo(ic)%grad)
-	endif
-enddo
-if (allocated(ODEdiff%ivar)) then
-	deallocate(ODEdiff%ivar)
-	deallocate(ODEdiff%varsite)
-	deallocate(ODEdiff%icoef)
-endif
-#endif
 
 ! Close all open files
 inquire(unit=nfout,OPENED=isopen)
