@@ -99,313 +99,25 @@ call rng_initialisation
 
 nsteps_per_min = 1.0/DELTA_T
 ngaps = 0
-max_ngaps = 5*NY*NZ
-
-NX = nlength
-NY = 2*nradius+ 2
-NZ = NY
 nlist = 0
 
-x0 = 0
-y0 = nradius + 1.5
-z0 = y0
+!x0 = 0
+!y0 = nradius + 1.5
+!z0 = y0
 
-max_nlist = 1.5*NX*NY*NZ
+if (allocated(perm_index)) deallocate(perm_index)
 
-allocate(occupancy(NX,NY,NZ))
-allocate(cell_list(max_nlist))
-allocate(gaplist(max_ngaps))
+allocate(cell_list(MAX_NLIST))
+allocate(gaplist(MAX_NGAPS))
+allocate(perm_index(MAX_NLIST))
 
-call make_reldir
-
-Centre = (/x0,y0,z0/)   ! (units = grids)
 lastID = 0
 k_nonrandom = 0
-lastNTcells = 0
-nadd_sites = 0
-lastbalancetime = 0
-
-occupancy(:,:,:)%indx(1) = 0
-occupancy(:,:,:)%indx(2) = 0
-do x = 1,NX
-	do y = 1,NY
-		do z = 1,NZ
-			if ((y-y0)**2 + (z-z0)**2 <= nradius**2) then
-				occupancy(x,y,z)%indx = 0
-			else
-				occupancy(x,y,z)%indx = OUTSIDE_TAG
-			endif
-		enddo
-	enddo
-enddo
 
 ok = .true.
 
 end subroutine
 
-
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-subroutine motility_calibration
-integer :: ic,id,k,ds(3), imin,isub
-integer :: NTcells, nvar0, nvar, ntime2
-integer :: ns = 10000
-integer :: npaths = 20
-integer :: npos = 301
-integer :: nbeta = 30, nrho = 50
-integer :: ibeta, irho, kpath
-real(REAL_KIND) :: dt, time1 = 5, time2 = 15   ! minutes (used for ICB paper results)
-real(REAL_KIND) :: tagrad = 10
-real(REAL_KIND) :: dbeta, drho
-real(REAL_KIND) :: betamin = 0.25, betamax = 0.9		! 0.25 - 0.90 for Model_N, 0.15 - 0.80 for Model_M
-real(REAL_KIND) :: rhomin = 0.20, rhomax = 0.85			! 0.20 - 0.85 for Model_N, 0.20 - 0.85 for Model_M
-real(REAL_KIND) :: Cm,speed,ssum,d
-integer, allocatable :: tagid(:), tagseq(:), tagsite(:,:,:), pathcell(:)
-integer, allocatable :: prevsite(:,:)   ! for mean speed computation
-real(REAL_KIND), allocatable :: Cm_array(:,:), S_array(:,:)
-type(cell_type) :: cell
-logical :: ok
-
-write(*,*) 'motility_calibration'
-
-NTcells = NX*NY*NZ
-if (motility_save_paths) then
-!        allocate(path(3,npaths,0:nvar))
-    allocate(pathcell(npaths))
-endif
-
-ntime2 = time2
-nvar0 = time1
-nvar = time2    ! number of minutes to simulate
-dt = DELTA_T*nsteps_per_min
-TagRadius = tagrad
-
-if (motility_param_range) then
-	drho = (rhomax-rhomin)/(nrho-1)
-	dbeta = (betamax-betamin)/(nbeta-1)
-elseif (n_multiple_runs > 1) then
-	nbeta = n_multiple_runs
-	nrho = 1
-	betamin = beta
-	rhomin = rho
-	drho = 0
-	dbeta = 0
-else
-	nbeta = 1
-	nrho = 1
-	betamin = beta
-	rhomin = rho
-	drho = 0
-	dbeta = 0
-endif
-
-allocate(Cm_array(nrho,nbeta))
-allocate(S_array(nrho,nbeta))
-
-write(*,*) 'nbeta,nrho: ',nbeta,nrho
-do ibeta = 1,nbeta
-    do irho = 1,nrho
-	    rho = rhomin + (irho-1)*drho
-	    beta = betamin + (ibeta-1)*dbeta
-	    write(*,'(a,2i3,2f6.2)') ' beta, rho: ',ibeta,irho,BETA,RHO
-	    call compute_dirprobs
-    	    call PlaceCells(ok)
-    	    if (.not.ok) stop
-!            call make_split(.true.)
-            if (nlist > 0) then
-    	        write(*,*) 'make tag list: NTcells,nlist,ntagged: ',NTcells,nlist,ntagged
-
-                allocate(tagseq(NTcells))
-                allocate(tagid(ntagged))
-                allocate(tagsite(3,ntagged,0:nvar))
-                tagseq = 0
-                k = 0
-    	        kpath = 0
-                do ic = 1,nlist
-                    if (cell_list(ic)%tag == TAGGED_CELL) then
-                        id = cell_list(ic)%ID
-                        k = k+1
-                        tagid(k) = id
-                        tagseq(id) = k
-                        tagsite(:,k,0) = cell_list(ic)%site
-						if (motility_save_paths) then
-							if (kpath < npaths) then
-								kpath = kpath + 1
-								pathcell(kpath) = ic
-							endif
-						endif
-                    endif
-                enddo
-            endif
-
-        ns = min(ns,nlist)
-        allocate(prevsite(3,ns))
-        do ic = 1,ns
-            prevsite(:,ic) = cell_list(ic)%site
-        enddo
-        ssum = 0
-
-        !
-        ! Now we are ready to run the simulation
-        !
-        if (motility_save_paths) then
-            open(nfpath,file='path.out',status='replace')
-            write(nfpath,'(i3,a)') npaths,' paths'
-        endif
-
-		istep = 0
-        do imin = 1,nvar
-            do isub = 1,nsteps_per_min
-				istep = istep + 1
-                call mover(ok)
-                if (.not.ok) stop
-                if (.not.SIMULATE_2D) then
-	                call squeezer(.false.)
-	            endif
-                do ic = 1,ns
-                    ds = cell_list(ic)%site - prevsite(:,ic)
-                    prevsite(:,ic) = cell_list(ic)%site
-                    d = sqrt(real(ds(1)*ds(1) + ds(2)*ds(2) + ds(3)*ds(3)))
-                    ssum = ssum + d*DELTA_X/DELTA_T
-                enddo
-                if (motility_save_paths) then
-                    k = (imin-1)*nsteps_per_min + isub
-                    if (k >= nvar0*nsteps_per_min .and. k < nvar0*nsteps_per_min + npos) then
-                        write(nfpath,'(160i4)') (cell_list(pathcell(kpath))%site(1:2),kpath=1,npaths)
-                    endif
-                endif
-            enddo
-            write(*,*) 'speed: ',ssum/(ns*nsteps_per_min*imin)
-
-            do ic = 1,nlist
-                cell = cell_list(ic)
-                if (cell%tag == TAGGED_CELL) then
-                    id = cell%ID
-                    k = tagseq(id)
-                    tagsite(:,k,imin) = cell%site
-!                   if (k < 20) write(*,*) 'site: ',cell%ID,cell%site
-                endif
-            enddo
-        enddo
-
-        call compute_Cm(tagsite,ntagged,nvar0,nvar,dt,Cm)
-        speed = ssum/(ns*nvar*nsteps_per_min)
-        write(*,'(a,2f8.2)') 'speed, Cm: ',speed,Cm
-        if (allocated(tagid))   deallocate(tagid)
-        if (allocated(tagseq))  deallocate(tagseq)
-        if (allocated(tagsite)) deallocate(tagsite)
-	enddo
-enddo
-if (allocated(pathcell)) deallocate(pathcell)
-deallocate(Cm_array)
-deallocate(S_array)
-if (motility_save_paths) then
-    close(nfpath)
-endif
-
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine diffusion_calibration
-!!!use ifport
-integer :: x, y, z, istep
-integer, parameter :: Ntimes = 50   !500
-real(REAL_KIND) :: t1, t2, Cnumeric(Ntimes),Canalytic(Ntimes)
-logical :: ok
-
-write(*,*) 'diffusion_calibration: '
-!call init_cytokine
-
-x = NX/4
-call analytical_soln(x,Canalytic,Ntimes)
-call PlaceCells(ok)
-if (.not.ok) stop
-!call make_split(.true.)
-
-!t1 = timef()
-call cpu_time(t1)
-do x = 1,NX
-    do y = 1,NY
-        do z = 1,NZ
-            occupancy(x,y,z)%indx = 1
-        enddo
-    enddo
-enddo
-
-!do istep = 1,Ntimes
-!    call diffuser
-!    write(*,*) istep,cyt(NX/4,NY/2,NZ/2,1)
-!    Cnumeric(istep) = cyt(NX/4,NY/2,NZ/2,1)
-!enddo
-!t2 = timef()
-call cpu_time(t2)
-write(*,'(a,f10.2)') 'Time: ',t2-t1
-write(nfout,*) 'NX, x, NDIFFSTEPS: ',NX,x,NDIFFSTEPS
-do istep = 1,Ntimes
-    write(nfout,'(i6,f8.2,2f8.4)') istep,istep*DELTA_T,Cnumeric(istep),Canalytic(istep)
-enddo
-
-call wrapup
-stop
-
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! A(n) = 2*Int[0,L](C0(x).cos(n.pi.x/L).dx)
-! with C0(x) = 1  x < L/2
-!            = 0  x > L/2
-! L = NX*DX
-! Site i corresponds to x = (i - 1/2)DX
-! With n = 2m-1, the integral for A gives for m = 1,2,3,...:
-! B(m) = A(n) = (-1)^m.2/(pi*n), other A(n) = 0
-! and B(0) = 0.5
-! and solution is the series:
-! C(x,t) = B(0) + Sum[m=1,...] B(m).cos(n.pi.x/L).exp(-K.t.(n*pi/L)^2)
-!-----------------------------------------------------------------------------------------
-subroutine analytical_soln(xsite,C,Ntimes)
-integer :: xsite, Ntimes
-real(REAL_KIND) :: C(Ntimes)
-integer, parameter :: Nterms = 100
-real(REAL_KIND) :: DX, DT, x, t, csum, bsum, L, xL, Kdiff, dC, tfac, Kfac, B(0:Nterms)
-integer :: n, m, k
-
-!Kdiff = K_diff(1)
-Kdiff = 2.0e-12         ! m^2/s
-write(*,*) 'DELTA_T: ',DELTA_T, DELTA_X, PI, Kdiff
-DX = DELTA_X*1.0e-6     ! m
-DT = DELTA_T*60         ! s
-L = NX*DX
-B(0) = 0.5d0
-bsum = 0
-do m = 1,Nterms
-    n = 2*m-1
-    B(m) = ((-1)**(m+1))*2/(n*PI)
-!    B1 = (2/(n*PI))*sin(n*PI/2)
-!    write(*,*) m,n,B(m)-B1
-    bsum = bsum + B(m)
-enddo
-
-Kfac = Kdiff*PI*PI/(L*L)
-write(*,*) 'Bsum: ',B(0),bsum
-x = (xsite-0.5)*DX
-xL = PI*x/L
-do k = 1,Ntimes
-    t = k*DT
-    csum = B(0)
-    do m = 1,Nterms
-        n = 2*m-1
-        tfac = exp(-Kfac*n*n*t)
-        dC = B(m)*cos(n*xL)*tfac
-        csum = csum + dC
-!        write(*,'(2i4,3e12.4)') m,n,tfac,dC,csum
-    enddo
-    C(k) = csum
-enddo
-write(*,'(10f7.4)') C
-!write(nfout,*) 'Analytical solution'
-!write(nfout,'(10f7.4)') C
-end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -494,18 +206,6 @@ do i = 1,30
 enddo
 end subroutine
 
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim,NY_dim,NZ_dim) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
-use, intrinsic :: iso_c_binding
-integer(c_int) :: NX_dim,NY_dim,NZ_dim
-
-NX_dim = NX
-NY_dim = NY
-NZ_dim = NZ
-end subroutine
-
 !-----------------------------------------------------------------------------------------
 ! Using the complete list of cells, cell_list(), extract info about the current state of the
 ! paracortex.  This info must be supplemented by counts of cells that have died and cells that
@@ -526,7 +226,7 @@ if (.not.use_TCP) then
 endif
 
 tnow = istep*DELTA_T
-summaryData(1:3) = [ int(tnow/60), istep, NTcells ]
+summaryData(1:3) = [ int(tnow/60), istep, Ncells ]
 !summaryData(1:26) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 !	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
 !	navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, &
@@ -818,6 +518,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 ! Pass a list of cell positions and associated data
+! Position is passes as an integer (um) 
 !--------------------------------------------------------------------------------
 subroutine get_scene(nTC_list,TC_list) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_scene
@@ -829,10 +530,10 @@ integer :: itcstate, ctype
 ! T cell section
 k = 0
 do kcell = 1,nlist
-	if (cell_list(kcell)%ID == 0) cycle  ! gap
+	if (cell_list(kcell)%state /= ALIVE) cycle
 	k = k+1
 	j = 5*(k-1)
-	site = cell_list(kcell)%site
+	site = cell_list(kcell)%centre(:,1) + 0.5
 !	ctype = cell_list(kcell)%ctype
 	itcstate = 0
 	TC_list(j+1) = kcell-1
@@ -916,34 +617,37 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine simulate_step(res) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step
+!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step 
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: hour, kpar=0
-real(REAL_KIND) :: tnow
-logical :: ok
+integer :: hour, nit, nt_hour, kpar=0
+real(REAL_KIND) :: tnow, dt
+logical :: ok, done, changed
 
 res = 0
-if (NTcells == 0) then
+if (Ncells == 0) then
 	call logger('Cells all gone')
 	res = 1
 	return
 endif
 dbug = .false.
+nt_hour = 3600/DELTA_T
 ok = .true.
 istep = istep + 1
 if (n_cell_positions > 0) then
 	call save_positions
 endif
 tnow = istep*DELTA_T
-if (mod(istep,60) == 0) then
-	write(logmsg,*) 'simulate_step: ',istep, '   NTcells: ',NTcells
+use_settling = (settle_hrs > 0)
+if (use_settling) then
+	settling = (tnow < settle_hrs*3600) 
+endif
+if (mod(istep,nt_hour) == 0) then
+	write(logmsg,'(a,i6,a,i6,a,f8.1)') 'simulate_step: ',istep, '   Ncells: ',Ncells, '  hour: ',tnow/3600
 	call logger(logmsg)
     if (TAGGED_LOG_PATHS) then
 		call add_log_paths
 	endif
-!	call checker
-!	call checker2D
 endif
 !if (FACS_INTERVAL > 0) then
 !	if (mod(istep,FACS_INTERVAL*240) == 0) then
@@ -954,17 +658,42 @@ endif
 if (TAGGED_LOG_PATHS .and. mod(istep,1) == 0) then
 	call update_log_paths
 endif
-!if (use_cytokines) then
-!    call diffuser
-!endif
 
-call mover(ok)
+call make_perm_index(ok)
 if (.not.ok) then
-	call logger("mover returned error")
-	res = -1
+	call logger('make_perm_index error')
+	res = 4
 	return
 endif
 
+!return
+
+!call update_all_nbrlists
+
+t_fmover = 0
+nit = 0
+done = .false.
+do while (.not.done)
+	nit = nit + 1
+	call fmover(dt,done,ok)
+	if (.not.ok) then
+		call logger('mover error')
+		res = 1
+		return
+	endif
+	t_fmover = t_fmover + dt
+	changed = .false.
+!	ncells0 = ncells
+!	call GrowCells(radiation_dose,dt,changed,ok)
+!	if (.not.ok) then
+!		call logger('grower error')
+!		res = 2
+!		return
+!	endif
+	if (changed) then
+		call make_perm_index(ok)
+	endif
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1049,14 +778,13 @@ integer :: ncpu
 character*(*) :: infile, outfile
 logical :: ok
 character*(64) :: msg
-real(REAL_KIND) :: epsilon, es_e, shift, sqr_es_e, k_v
 integer :: error
 
 ok = .true.
 initialized = .false.
 par_zig_init = .false.
-!Mnodes = ncpu
-Mnodes = 1
+Mnodes = ncpu
+!Mnodes = 1
 inputfile = infile
 outputfile = outfile
 write(logmsg,*) 'ncpu: ',Mnodes
@@ -1080,6 +808,8 @@ call read_cell_params(ok)
 if (.not.ok) return
 call logger("did read_cell_params")
 
+call setup_force_parameters
+
 call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')
@@ -1098,16 +828,14 @@ else
 endif
 if (.not.ok) return
 
-! For cell-cell force hysteresis
-alpha_v = 0.25
-epsilon = 7.5
-es_e = 1
-shift = -6
-sqr_es_e = sqrt(es_e)
-k_v = 2/alpha_v - sqr_es_e + sqrt(es_e - shift/epsilon)
-k_detach = k_v*alpha_v/2
+nwallcells = 0
+!call make_wall
 
-!call make_split(.true.)
+d_nbr_limit = 1.5*2*Raverage	!*Rdivide0	! 1.5 is an arbitrary choice - was 1.2
+call setup_nbrlists
+
+return
+
 call init_counters
 if (TAGGED_LOG_PATHS) then
 	call setup_log_path_sites
@@ -1121,78 +849,11 @@ endif
 call chemokine_setup
 firstSummary = .true.
 initialized = .true.
-write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',NTcells0
+write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells
 call logger(logmsg)
 
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-! The test case has two chemokines and two associated receptor types.
-! Each receptor has the same strength.  The difference in the effects of the two
-! chemokine-receptor pairs is determined by the chemokine gradient parameters.
-!-----------------------------------------------------------------------------------------
-subroutine chemokine_setup
-integer :: x, y, z, kcell
-type(cell_type), pointer :: cell
-
-call chemo_p_setup
-
-! Set up a test case.
-
-grad_dir(1,:) = [1, 0, 1]
-grad_dir(2,:) = [1, 0, 1]
-
-! Chemokines
-!===========
-! Instead of solving for the chemokine concentrations, the chemokine gradient is specified. 
-chemo(1)%name = 'Chemokine_1'
-if (chemo(1)%used) then
-	if (allocated(chemo(1)%grad)) deallocate(chemo(1)%grad)
-	allocate(chemo(1)%grad(3,NX,NY,NZ))
-	do x = 1,NX
-		do y = 1,NY
-			do z = 1,NZ
-				chemo(1)%grad(:,x,y,z) = grad_amp(1)*grad_dir(1,:)
-			enddo
-		enddo
-	enddo
-endif
-chemo(2)%name = 'Chemokine_2'
-if (chemo(2)%used) then
-	if (allocated(chemo(2)%grad)) deallocate(chemo(2)%grad)
-	allocate(chemo(2)%grad(3,NX,NY,NZ))
-	do x = 1,NX
-		do y = 1,NY
-			do z = 1,NZ
-				chemo(2)%grad(:,x,y,z) = grad_amp(2)*grad_dir(2,:)
-			enddo
-		enddo
-	enddo
-endif
-
-! Receptors
-!==========
-receptor(1)%name = 'Receptor_1'
-receptor(1)%chemokine = 1
-receptor(1)%used = chemo(receptor(1)%chemokine)%used
-receptor(1)%sign = 1
-receptor(1)%strength = 1.0
-receptor(2)%name = 'Receptor_2'
-receptor(2)%used = .false.
-receptor(2)%chemokine = 2
-receptor(2)%used = chemo(receptor(2)%chemokine)%used
-receptor(2)%sign = 1
-receptor(2)%strength = 1.0
-
-! Cells
-!======
-do kcell = 1,nlist
-	cell => cell_list(kcell)
-	cell%receptor_saturation_time = 0
-	cell%receptor_level(1) = 1
-	cell%receptor_level(2) = 1
-enddo
-end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -1202,12 +863,6 @@ logical :: isopen
 
 call logger('doing wrapup ...')
 ierr = 0
-!if (allocated(xoffset)) deallocate(xoffset)
-!if (allocated(zoffset)) deallocate(zoffset)
-!if (allocated(xdomain)) deallocate(xdomain)
-!if (allocated(zdomain)) deallocate(zdomain)
-!if (allocated(zrange2D)) deallocate(zrange2D)
-if (allocated(occupancy)) deallocate(occupancy)
 !if (allocated(Tres_dist)) deallocate(Tres_dist)
 if (allocated(cell_list)) deallocate(cell_list,stat=ierr)
 if (ierr /= 0) then
@@ -1358,6 +1013,7 @@ if (use_tcp) then
 		return
 	endif
 endif
+write(*,*) 'ncpu: ',ncpu
 call setup(ncpu,infile,outfile,ok)
 if (ok) then
 	clear_to_send = .true.

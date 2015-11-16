@@ -118,7 +118,9 @@ MainWindow::MainWindow(QWidget *parent)
 //#endif
 //    groupBox_run->setGeometry(rect);
 
-    vtk = new MyVTK(mdiArea_VTK, test_page);
+    double radius = line_TUBE_RADIUS->text().toDouble();
+    double length = line_TUBE_LENGTH->text().toDouble();
+    vtk = new MyVTK(mdiArea_VTK, test_page, radius, length);
     vtk->init();
 
     rect.setX(50);
@@ -1065,15 +1067,15 @@ void MainWindow::readInputFile()
     reloadParams();
     paramSaved = true;
 	inputFile = fileName;
-	QLineEdit *ql = findChild<QLineEdit*>("line_SPECIAL_CASE");
-	QLineEdit *qt = findChild<QLineEdit*>("text_SPECIAL_CASE_FILE");
-	int ispecial_case = ql->text().toInt();
-	sprintf(msg,"ispecial_case: %d",ispecial_case);
-	LOG_MSG(msg);
-	if (ispecial_case != 0)
-		qt->setEnabled(true);
-	else
-		qt->setEnabled(false);
+//	QLineEdit *ql = findChild<QLineEdit*>("line_SPECIAL_CASE");
+//	QLineEdit *qt = findChild<QLineEdit*>("text_SPECIAL_CASE_FILE");
+//	int ispecial_case = ql->text().toInt();
+//	sprintf(msg,"ispecial_case: %d",ispecial_case);
+//	LOG_MSG(msg);
+//	if (ispecial_case != 0)
+//		qt->setEnabled(true);
+//	else
+//		qt->setEnabled(false);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1467,8 +1469,8 @@ void MainWindow::saveSnapshot()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setTube()
 {
-    Global::tubeLength = line_NLENGTH->text().toInt();
-    Global::tubeRadius = line_NRADIUS->text().toInt();
+    Global::tubeLength = line_TUBE_LENGTH->text().toInt();
+    Global::tubeRadius = line_TUBE_RADIUS->text().toInt();
     Global::nLines = 16;
 }
 
@@ -1476,7 +1478,9 @@ void MainWindow::setTube()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::runServer()
 {
-	if (paused) {
+    double opacity = slider_opacity->value()/100.;
+    vtk->setWallOpacity(opacity);
+    if (paused) {
 		if (vtk->playing) {
 			vtk->playon();
 		} else {
@@ -1845,7 +1849,9 @@ void MainWindow::showSummary()
 
     Global::mutex1.lock();
 
-    hour = Global::summaryData[0]*Global::DELTA_T/60;
+    hour = Global::summaryData[1]*Global::DELTA_T/60;
+    sprintf(msg,"summaryData[1] %d DELTA_T: %f hour: %f",Global::summaryData[1],Global::DELTA_T,hour);
+    LOG_MSG(msg);
 	progress = int(100.*hour/hours);
 	progressBar->setValue(progress);
 	QString hourstr = QString::number(int(hour));
@@ -3155,6 +3161,13 @@ void MainWindow::showGradient3D()
     mySimpleView3D->show();
     mySimpleView3D->aimCamera();
 //    mySimpleView3D->GetRenderWindow()->SetSize(768,768);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_slider_opacity_valueChanged(int value)
+{
+    vtk->setWallOpacity(value/100.);
 }
 
 //======================================================================================================

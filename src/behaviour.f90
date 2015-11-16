@@ -3,7 +3,8 @@ module behaviour
 
 use global
 use packer
-use motility
+use chemokine
+!use motility
 
 implicit none
 
@@ -124,12 +125,6 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: ncpu_dummy, ntgui, idelay, iwrap, ichemo_1, ichemo_2
-!real(REAL_KIND) :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
-!integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-!integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, halveCD69
-!character(64) :: specialfile
-!character(4) :: logstr
-!logical, parameter :: use_chemo = .false.
 
 ok = .false.
 write(logmsg,*) 'Read cell parameter file: ',inputfile
@@ -137,11 +132,11 @@ call logger(logmsg)
 !call logger('Reading cell parameter file')
 !call logger(inputfile)
 open(nfcell,file=inputfile,status='old')
-read(nfcell,*) DELTA_X						! lattice grid spacing
 read(nfcell,*) DELTA_T						! time step (min)
 read(nfcell,*) BETA							! speed: 0 < beta < 1		(0.65)
 read(nfcell,*) RHO							! persistence: 0 < rho < 1	(0.95)
 read(nfcell,*) days							! number of days to simulate
+read(nfcell,*) settle_hrs					! number of hours for settling
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! # of processors - not used at the moment
@@ -156,22 +151,28 @@ read(nfcell,*) idelay						! simulation step delay (ms)
 read(nfcell,*) ichemo_1
 read(nfcell,*) grad_amp(1)					! chemokine gradient amplitude
 read(nfcell,*) BG_flow_amp				    ! background velocity amplitude (um/min)
-read(nfcell,*) Kdrag
-read(nfcell,*) Kadhesion
-read(nfcell,*) Kstay
+!read(nfcell,*) Kdrag
+!read(nfcell,*) Kadhesion
+!read(nfcell,*) Kstay
+read(nfcell,*) a_separation
+read(nfcell,*) a_force
+read(nfcell,*) c_force
+read(nfcell,*) x0_force
+read(nfcell,*) x1_force
+read(nfcell,*) kdrag
+read(nfcell,*) frandom
 read(nfcell,*) n_cell_positions				! number of cell positions to save each time step
 close(nfcell)
 
 call logger('Finished reading cell parameter file')
 
-use_wrapping = .false.
 chemo(1)%used = (ichemo_1 == 1)
 chemo(2)%used = .false.
 PI = 4*atan(1.0d0)
-Ve = DELTA_X*DELTA_X*DELTA_X
 
-Nsteps = days*60*24/DELTA_T
-Mnodes = 1
+DELTA_T = 60*DELTA_T			! min -> sec
+Nsteps = days*3600*24/DELTA_T
+!Mnodes = 1
 call make_outputfilename
 open(nfout,file=outputfile,status='replace')
 
@@ -220,7 +221,6 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! When a T cell dies it is removed from the cell list (%ID -> 0)
-! and removed from occupancy()%indx()
 ! The count of sites to add is decremented, for later adjustment of the blob size.
 !-----------------------------------------------------------------------------------------
 subroutine Tcell_death(kcell)
@@ -231,6 +231,7 @@ logical :: cognate
 !write(logmsg,*) 'Tcell_death: ',kcell
 !call logger(logmsg)
 cell_list(kcell)%ID = 0
+cell_list(kcell)%state = DEAD
 ctype = cell_list(kcell)%ctype
 ngaps = ngaps + 1
 if (ngaps > max_ngaps) then
@@ -239,34 +240,7 @@ if (ngaps > max_ngaps) then
 endif
 gaplist(ngaps) = kcell
 
-NTcells = NTcells - 1
-site = cell_list(kcell)%site
-indx = occupancy(site(1),site(2),site(3))%indx
-if (indx(1) == kcell) then
-    occupancy(site(1),site(2),site(3))%indx(1) = indx(2)
-    occupancy(site(1),site(2),site(3))%indx(2) = 0
-elseif (indx(2) == kcell) then
-    occupancy(site(1),site(2),site(3))%indx(2) = 0
-else
-    write(logmsg,*) 'ERROR: Tcell_death: cell not at site: ',kcell,site,indx
-    call logger(logmsg)
-    stop
-endif
-
-! Now we need to make a site unavailable
-! Remove (make OUTSIDE) a boundary site near to the specified site.
-! The criteria for selection of a site to remove are that it is on the blob boundary,
-! preferably "sticking out", and that it is vacant.  A site may be made vacant by
-! moving a cell to a nearby available site.
-! One way to handle this is to maintain a count of the number of sites to be added(removed).
-! At regular intervals the counts can be aggregated and if the total is big enough (+ or -)
-! they can all be processed within a gather-scatter cycle.
-if (use_add_count) then
-    nadd_sites = nadd_sites - 1
-else
-    write(*,*) 'Tcell_death: No site removal code, use add count'
-    stop
-endif
+Ncells = Ncells - 1
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -334,59 +308,6 @@ ok = .true.
 !	ok = .false.
 !    return
 !endif
-!NTcells = NTcells + 1
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Locate a free slot in a site adjacent to site1: site2 (freeslot)
-! Returns freeslot = 0 if there is no free space in an adjacent site.
-! The occupancy array occ() can be either occupancy() or big_occupancy(), hence
-! the need for xlim (= NXX or NX)
-!-----------------------------------------------------------------------------------------
-subroutine get_free_slot(occ,xlim,site1,site2,freeslot)
-type(occupancy_type) :: occ(:,:,:)
-integer :: xlim, site1(3), site2(3), freeslot
-logical :: Lwall, Rwall
-integer :: i, indx2(2)
-
-if (site1(1) == 1) then
-    Lwall = .true.
-else
-    Lwall = .false.
-endif
-if (site1(1) == xlim) then
-    Rwall = .true.
-else
-    Rwall = .false.
-endif
-
-if (site1(1) < 1) then
-    write(logmsg,*) 'get_free_slot: bad site1: ',site1
-	call logger(logmsg)
-    stop
-endif
-do i = 1,27
-    if (i == 14) cycle       ! i = 14 corresponds to the no-jump case
-	site2 = site1 + jumpvec(:,i)
-    if (Lwall .and. site2(1) < 1) then
-        cycle
-    endif
-    if (Rwall .and. site2(1) > xlim) then
-        cycle
-    endif
-    if (site2(2) < 1 .or. site2(2) > NY .or. site2(3) < 1 .or. site2(3) > NZ) cycle
-	indx2 = occ(site2(1),site2(2),site2(3))%indx
-	if (indx2(1) >= 0) then         ! not OUTSIDE_TAG or DC
-	    if (indx2(1) == 0) then     ! slot 1 is free
-	        freeslot = 1
-            return
-	    elseif (indx2(2) == 0) then ! slot 2 is free
-	        freeslot = 2
-            return
-        endif
-    endif
-enddo
-freeslot = 0
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -394,148 +315,42 @@ end subroutine
 ! We need to give a progeny cell (the result of cell division) the same ID as its parent.
 ! This implies that there needs to be a flag to indicate that the cell results from division.
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,cell,site,ctype,gen,tag,region,dividing,ok)
-type(cell_type) :: cell
-integer :: kcell, site(3), ctype, gen, tag, region
+subroutine create_Tcell(kcell,rsite,ctype,gen,tag,region,dividing,ok)
+type(cell_type), pointer :: cp
+integer :: kcell, ctype, gen, tag, region
+real(REAL_KIND) :: rsite(3)
 logical :: dividing, ok
 real(REAL_KIND) :: tnow
 integer :: kpar = 0
 
 ok = .true.
 tnow = istep*DELTA_T
-cell%entrytime = tnow
-if (dividing) then
-    cell%ID = 0
+cp => cell_list(kcell)
+!cell%entrytime = tnow
+cp%birthtime = tnow
+if (dividing) then	!???????????????
+    cp%ID = 0
 else
     lastID = lastID + 1
-    cell%ID = lastID
+    cp%ID = lastID
 endif
-cell%site = site
-cell%ctype = ctype
-cell%tag = tag
-cell%step = 0
-cell%lastdir = random_int(1,6,kpar)
-cell%dtotal = 0
+cp%state = ALIVE
+cp%nspheres = 1
+cp%centre(:,1) = rsite
+cp%radius = Raverage
+cp%ctype = ctype
+cp%tag = tag
+cp%step = 0
+!cell%lastdir = random_int(1,6,kpar)
+cp%dtotal = 0
+cp%mitosis = 0
+cp%Iphase = .true.
 
 end subroutine
 
 !--------------------------------------------------------------------------------
 ! Add a cell (kcell) with characteristics (ctype, gen, stage) at site.
-!--------------------------------------------------------------------------------
-subroutine add_Tcell(site,ctype,cognate,gen,tag,stage,region,kcell,ok)
-integer :: site(3), ctype, gen, tag, stage, region, kcell
-logical :: cognate, ok
-integer :: indx(2)
 
-ok = .true.
-if (ngaps > 0) then
-    kcell = gaplist(ngaps)
-    ngaps = ngaps - 1
-else
-    nlist = nlist + 1
-    if (nlist > max_nlist) then
-		write(logmsg,*) 'Error: add_Tcell: cell list full: ',nlist
-		call logger(logmsg)
-		ok = .false.
-		return
-	endif
-    kcell = nlist
-endif
-if (dbug) then
-    write(*,'(a,9i7,L2)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region,cognate
-endif
-call create_Tcell(kcell,cell_list(kcell),site,ctype,gen,tag,region,.false.,ok)
-if (.not.ok) return
-
-indx = occupancy(site(1),site(2),site(3))%indx
-if (indx(1) == 0) then
-    indx(1) = kcell
-elseif (indx(2) == 0) then
-    indx(2) = kcell
-else
-    write(logmsg,*) 'ERROR: add_Tcell: no free slot: ',site,indx
-    call logger(logmsg)
-    ok = .false.
-    return
-endif
-occupancy(site(1),site(2),site(3))%indx = indx
-
-end subroutine
-
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-subroutine add_site_local(site)
-integer :: site(3)
-
-if (use_add_count) then
-    nadd_sites = nadd_sites - 1
-else
-    write(*,*) 'add_site_local: no code to add site, use add count'
-    stop
-endif
-end subroutine
-
-!--------------------------------------------------------------------------------
-! Add a vacant site at a boundary to account for the T cell added at site
-! In the case of an end node (me = 0 or me = Mnodes-1) the added site can be
-! at a different x value, but for internal nodes the added site  must go at
-! (or near) the same x value.
-! For the spherical blob case, try to place the site at a point near the bdry
-! on a line drawn through site from the centre.
-! NOT USED
-!--------------------------------------------------------------------------------
-subroutine add_vacant_site(site,kpar)
-integer :: site(3),kpar
-integer :: k, site0(3),newsite(3)
-real(REAL_KIND) :: R
-real(REAL_KIND) :: dxyz(3)
-logical :: redo
-
-if (dbug) write(*,'(a,4i6)') 'add_vacant_site: ',site
-site0 = site
-dxyz = real(site0) - Centre
-do k = 2,3
-!    call random_number(R)
-    R = par_uni(kpar)
-    dxyz(k) = dxyz(k) + (R - 0.5)
-enddo
-call normalize(dxyz)
-redo = .false.
-k = 0
-do
-    k = k+1
-    newsite = site0 + k*0.5*dxyz
-    if (newsite(1) < 1 .or. newsite(1) > NX) then
-        site0 = site0 + (k-1)*0.5*dxyz
-        dxyz(1) = 0
-        call normalize(dxyz)
-        redo = .true.
-        exit
-    endif
-    if (newsite(2) < 1 .or. newsite(2) > NY .or. newsite(3) < 1 .or. newsite(3) > NZ) then
-        write(*,*) 'ERROR: add_vacant_site: reached grid limits (a): ',k,site,dxyz
-        stop
-    endif
-enddo
-if (redo) then
-    if (dbug) write(*,*) 'redo: ', site0
-    k = 0
-    do
-        k = k+1
-        newsite = site0 + k*0.5*dxyz
-        if (newsite(2) < 1 .or. newsite(2) > NY .or. newsite(3) < 1 .or. newsite(3) > NZ) then
-            write(*,*) 'ERROR: add_vacant_site: reached grid limits (b): ',k,site,dxyz
-            newsite = site0 + (k-1)*0.5*dxyz
-            write(*,*) newsite,occupancy(newsite(1),newsite(2),newsite(3))%indx(1)
-            stop
-        endif
-    enddo
-endif
-if (dbug) write(*,'(a,4i6)') 'newsite: ',newsite
-occupancy(newsite(1),newsite(2),newsite(3))%indx = 0
-if (dbug) write(*,'(a,7i6)') 'site, vacant site: ',site,newsite
-
-end subroutine
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
@@ -583,88 +398,80 @@ end subroutine
 subroutine PlaceCells(ok)
 logical :: ok
 integer :: kcell, i, ix, iy, iz, nxx, nyy, nzz
-real(REAL_KIND) :: cellradius, xrng, zrng, z0, dz, u, h
-real(REAL_KIND) :: centre(3), rsite(3), block_centre(3), plug_centre(3)
+integer :: gen, region, ctype, tag
+real(REAL_KIND) :: cell_radius, xrng, zrng, z0, dz, u, h
+real(REAL_KIND) :: centre(3), rsite(3), block_centre(3), plug_centre(3), x, y, z, r
 
 z0 = (plug_zmax + plug_zmin)/2
 xrng = tube_radius
 zrng = plug_zmax - plug_zmin
 dz = zrng/2
 plug_centre = [0.d0, 0.d0, z0]
-cellradius = Raverage
-nxx = 1.2*xrng/cellradius
-nzz = (1.5*dz)/cellradius
-nyy = 1.3*nxx
-call SelectCellLocations(nxx, nyy, nzz, cellradius, block_centre)
-
-write(nflog,*) 'nxx,nyy,nzz: ',nxx,nyy,nzz
-write(nflog,'(a,3f8.1)') 'plug_centre: ',plug_centre
-write(nflog,'(a,3f8.1)') 'block_centre: ',block_centre
+cell_radius = Raverage
 kcell = 0
-do i = 1,nxx*nyy*nzz
-	if (cdist(i)+cellradius > tube_radius) cycle
-	ix = xyz_lookup(i)%x
-	iy = xyz_lookup(i)%y
-	iz = xyz_lookup(i)%z
-	centre = cloc(ix,iy,iz)%centre - block_centre + plug_centre
-	if (centre(3) < plug_zmin .or. centre(3) > plug_zmax) cycle
-	u = centre(3) - z0
-	h = (1 + cos(u*PI/dz))*plug_hmax/2
-	if (cdist(i) < tube_radius - h) cycle
-	kcell = kcell + 1
-	rsite = centre
-	write(nflog,'(2i6,3i4,3f8.1)') kcell,i,ix,iy,iz,rsite
-!	call AddCell(kcell,rsite)
-enddo
-call FreeCellLocations
-nlist = kcell
-ncells = kcell
-stop
-end subroutine
+if (use_packing) then
+	nxx = 1.2*xrng/cell_radius
+	nzz = 1.5*dz/cell_radius
+	nyy = 1.3*nxx
+	call SelectCellLocations(nxx, nyy, nzz, cell_radius, block_centre)
 
-!-----------------------------------------------------------------------------------------
-! Initial cell position data is loaded into occupancy() and cell_list().
-! The 
-!-----------------------------------------------------------------------------------------
-subroutine PlaceCells_old(ok)
-logical :: ok
-integer :: x, y, z, kcell, site(3)
-integer :: gen, tag, region, ctype
-integer :: x0
-real(REAL_KIND) :: R
-integer :: kpar = 0
-
-ok = .false.
-write(nflog,*) nlength,nradius,nplug
-write(nflog,*) NX,NY,NZ
-istep = 0
-gen = 1
-ctype = 1
-region = 1
-tag = 0
-x0 = NX/2 - nplug/2
-kcell = 0
-do x = x0,x0+nplug-1
-	do y = 1,NY
-		do z = 1,NZ
-			if (occupancy(x,y,z)%indx(1) == 0) then ! vacant site
+	write(nflog,*) 'nxx,nyy,nzz: ',nxx,nyy,nzz
+	write(nflog,'(a,3f8.1)') 'plug_centre: ',plug_centre
+	write(nflog,'(a,3f8.1)') 'block_centre: ',block_centre
+	do i = 1,nxx*nyy*nzz
+		if (cdist(i)+cell_radius > tube_radius) cycle
+		ix = xyz_lookup(i)%x
+		iy = xyz_lookup(i)%y
+		iz = xyz_lookup(i)%z
+		centre = cloc(ix,iy,iz)%centre - block_centre + plug_centre
+		if (centre(3) < plug_zmin .or. centre(3) > plug_zmax) cycle
+		u = centre(3) - z0
+		h = (1 + cos(u*PI/dz))*plug_hmax/2
+		if (cdist(i) < tube_radius - h) cycle
+		kcell = kcell + 1
+		rsite = centre
+	!	write(nflog,'(2i6,3i4,3f8.1)') kcell,i,ix,iy,iz,rsite
+		gen = 1
+		region = 0	! don't know about regions yet
+		ctype = TROPHO_CELL
+		tag = 0
+		call create_Tcell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+		if (.not.ok) return
+	enddo
+	call FreeCellLocations
+else
+	nxx = tube_radius/(2*cell_radius) + 1
+	nzz = dz/(2*cell_radius) + 1
+	do ix = -nxx,nxx
+		do iy = -nxx,nxx
+			do iz = -nzz,nzz
+				x = ix*2*cell_radius	! (x,y,z) is the offset from the centre of the plug
+				y = iy*2*cell_radius
+				z = iz*2*cell_radius
+				r = sqrt(x*x + y*y)
+				if (r + cell_radius > tube_radius) cycle
+				if (z < -dz .or. z > dz) cycle
+				h = (1 + cos(z*PI/dz))*plug_hmax/2
+				if (r < tube_radius - h) cycle
 				kcell = kcell + 1
-				site = (/x,y,z/)
+				rsite = [x, y, z0+z]
+				write(nflog,'(i6,3i4,3f8.1)') kcell,ix,iy,iz,rsite
 				gen = 1
 				region = 0	! don't know about regions yet
 				ctype = TROPHO_CELL
 				tag = 0
-				call create_Tcell(kcell,cell_list(kcell),site,ctype,gen,tag,region,.false.,ok)
+				call create_Tcell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
 				if (.not.ok) return
-				occupancy(x,y,z)%indx(1) = kcell
-			endif
+			enddo
 		enddo
 	enddo
-enddo
-NTcells0 = kcell
-nlist = NTcells0
-NTcells = NTcells0
+endif
+nlist = kcell
+ncells = kcell
+
 
 end subroutine
+
+
 
 end module

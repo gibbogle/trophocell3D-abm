@@ -164,7 +164,7 @@ void ExecThread::run()
     sprintf(msg,"len_infile: %d len_outfile: %d",len_infile,len_outfile);
     LOG_MSG(msg);
     execute(&Global::ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-    get_dimensions(&Global::NX,&Global::NY,&Global::NZ);
+//    get_dimensions(&Global::NX,&Global::NY,&Global::NZ);
     LOG_MSG("did execute");
     sprintf(msg,"summary_interval: %d nt_vtk: %d",Global::summary_interval,Global::nt_vtk);
     LOG_MSG(msg);
@@ -244,12 +244,7 @@ void ExecThread::run()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot()
 {
-//    int nTC_size, nDC_size, nbond_size;
-
     Global::mutex2.lock();
-//    get_scene_dimensions(&nTC_size,&nDC_size,&nbond_size);
-//    sprintf(msg,"nTC_size, nDC_size, nbond_size: %d %d %d",nTC_size, nDC_size, nbond_size);
-//    LOG_MSG(msg);
     get_scene(&Global::nTC_list,Global::TC_list);
     if (Global::nTC_list > MAX_TC) {
 		LOG_MSG("Error: MAX_TC exceeded");

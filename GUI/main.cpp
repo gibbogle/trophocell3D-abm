@@ -12,7 +12,7 @@ LOG_DECLARE;
 int main(int argc, char *argv[])
 {
 	//initialize file logger
-    LOG_INIT("tropho-abm.log");
+    LOG_INIT("tropho_GUI.log");
 
 //	Q_INIT_RESOURCE(ABM_GUI);
 

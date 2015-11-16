@@ -3,6 +3,8 @@
 #include <vtkCamera.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkObjectFactory.h>
+#include <vtkTransformPolyDataFilter.h>
+#include <vtkTransform.h>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -70,7 +72,7 @@ vtkStandardNewMacro(MouseInteractorStyle4);
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-MyVTK::MyVTK(QWidget *page, QWidget *test_page)
+MyVTK::MyVTK(QWidget *page, QWidget *test_page, double radius, double length)
 {
     zoomlevel = 0.4;
 	double backgroundColor[] = {0.0,0.0,0.0};
@@ -111,12 +113,28 @@ MyVTK::MyVTK(QWidget *page, QWidget *test_page)
 	TcellMapper->SetInputConnection(Tcell->GetOutputPort());
 
     vtkCylinderSource *cyl = vtkCylinderSource::New();
-    cyl->SetResolution(12);
-    cyl->SetRadius(0.1);
-    cyl->SetHeight(1.0);
-    cylMapper = vtkPolyDataMapper::New();
+    cyl->SetCenter(0.0, 0.0, 0.0);
+    cyl->SetRadius(radius);
+    cyl->SetHeight(length);
+    cyl->SetResolution(100);
+    cyl->CappingOff();
 
-    cylMapper->SetInputConnection(cyl->GetOutputPort());
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->RotateWXYZ(90., 1., 0., 0.);
+    transform->Translate(0., length/2, 0.);
+    vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transformFilter->SetTransform(transform);
+    transformFilter->SetInputConnection(cyl->GetOutputPort());
+    transformFilter->Update();
+
+    cylMapper = vtkPolyDataMapper::New();
+    cylMapper->SetInputConnection(transformFilter->GetOutputPort());
+    cylactor = vtkSmartPointer<vtkActor>::New();
+    cylactor->SetMapper(cylMapper);
+//    cylactor->GetProperty()->SetOpacity(0.5); // translucent !!!
+    cylactor->GetProperty()->SetColor(0, 1, 0);
+    ren->AddActor(cylactor);
+//    ren->SetBackground(.1, .3,.2); // Background color
 
 	// Create image filter for save Snapshot()
 	w2img = vtkWindowToImageFilter::New();
@@ -126,7 +144,9 @@ MyVTK::MyVTK(QWidget *page, QWidget *test_page)
 	paused = false;
     framenum = 0;
 
-	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
+//	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
+    ren->GetActiveCamera()->SetFocalPoint(0.,0.,0.);
+    ren->GetActiveCamera()->SetPosition(0.,0.,-5*radius);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -159,12 +179,22 @@ void MyVTK::test_canvas(QWidget *test_page)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
+void MyVTK::setWallOpacity(double opacity)
+{
+    cylactor->GetProperty()->SetOpacity(opacity);
+
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void MyVTK::get_cell_positions(bool dummy)
 {
-    double TC_diam = 1.0;
+    double TC_diam = 10.0;
 	TCpos_list.clear();
 	DCpos_list.clear();
 	bondpos_list.clear();
+    sprintf(msg,"nTC_list: %d TC_diam: %f",Global::nTC_list,TC_diam);
+    LOG_MSG(msg);
     for (int i=0; i<Global::nTC_list; i++) {
 		int j = 5*i;
 		CELL_POS cp;
@@ -173,8 +203,10 @@ void MyVTK::get_cell_positions(bool dummy)
         cp.y = Global::TC_list[j+2];
         cp.z = Global::TC_list[j+3];
         cp.state = Global::TC_list[j+4];
-		cp.diameter = TC_diam;
+        cp.diameter = TC_diam;
 		TCpos_list.append(cp);
+//        sprintf(msg,"cell pos: i: %d x,y,z: %d %d %d state: %d diam: %f",i,cp.x,cp.y,cp.z,cp.state,cp.diameter);
+//        LOG_MSG(msg);
 	}
 }
 
@@ -207,9 +239,9 @@ void MyVTK::renderCells(bool dummy)
     process_Tcells();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
-		ren->ResetCamera();
+//		ren->ResetCamera();
 	}
-    makeLines();
+//    makeLines();
     iren->Render();
 	first_VTK = false;	
 }
@@ -288,6 +320,7 @@ void MyVTK::process_Tcells()
         actor = T_Actor_list[tag];
         actor->GetProperty()->SetColor(r, g, b);
         actor->SetPosition(cp.x, cp.y, cp.z);
+        actor->SetScale(cp.diameter);
 		if (actor != 0) 
 			actor->SetPosition(cp.x, cp.y, cp.z);
 		else {

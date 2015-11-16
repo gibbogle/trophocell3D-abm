@@ -8498,5 +8498,996 @@ do k = 1,njumpdirs
 enddo
 end subroutine
 
+!--------------------------------------------------------------------------------
+subroutine add_Tcell(site,ctype,cognate,gen,tag,stage,region,kcell,ok)
+integer :: site(3), ctype, gen, tag, stage, region, kcell
+logical :: cognate, ok
+integer :: indx(2)
 
+ok = .true.
+if (ngaps > 0) then
+    kcell = gaplist(ngaps)
+    ngaps = ngaps - 1
+else
+    nlist = nlist + 1
+    if (nlist > max_nlist) then
+		write(logmsg,*) 'Error: add_Tcell: cell list full: ',nlist
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+    kcell = nlist
+endif
+if (dbug) then
+    write(*,'(a,9i7,L2)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region,cognate
+endif
+call create_Tcell(kcell,cell_list(kcell),site,ctype,gen,tag,region,.false.,ok)
+if (.not.ok) return
+
+indx = occupancy(site(1),site(2),site(3))%indx
+if (indx(1) == 0) then
+    indx(1) = kcell
+elseif (indx(2) == 0) then
+    indx(2) = kcell
+else
+    write(logmsg,*) 'ERROR: add_Tcell: no free slot: ',site,indx
+    call logger(logmsg)
+    ok = .false.
+    return
+endif
+occupancy(site(1),site(2),site(3))%indx = indx
+
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine add_site_local(site)
+integer :: site(3)
+
+if (use_add_count) then
+    nadd_sites = nadd_sites - 1
+else
+    write(*,*) 'add_site_local: no code to add site, use add count'
+    stop
+endif
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Add a vacant site at a boundary to account for the T cell added at site
+! In the case of an end node (me = 0 or me = Mnodes-1) the added site can be
+! at a different x value, but for internal nodes the added site  must go at
+! (or near) the same x value.
+! For the spherical blob case, try to place the site at a point near the bdry
+! on a line drawn through site from the centre.
+! NOT USED
+!--------------------------------------------------------------------------------
+subroutine add_vacant_site(site,kpar)
+integer :: site(3),kpar
+integer :: k, site0(3),newsite(3)
+real(REAL_KIND) :: R
+real(REAL_KIND) :: dxyz(3)
+logical :: redo
+
+if (dbug) write(*,'(a,4i6)') 'add_vacant_site: ',site
+site0 = site
+dxyz = real(site0) - Centre
+do k = 2,3
+!    call random_number(R)
+    R = par_uni(kpar)
+    dxyz(k) = dxyz(k) + (R - 0.5)
+enddo
+call normalize(dxyz)
+redo = .false.
+k = 0
+do
+    k = k+1
+    newsite = site0 + k*0.5*dxyz
+    if (newsite(1) < 1 .or. newsite(1) > NX) then
+        site0 = site0 + (k-1)*0.5*dxyz
+        dxyz(1) = 0
+        call normalize(dxyz)
+        redo = .true.
+        exit
+    endif
+    if (newsite(2) < 1 .or. newsite(2) > NY .or. newsite(3) < 1 .or. newsite(3) > NZ) then
+        write(*,*) 'ERROR: add_vacant_site: reached grid limits (a): ',k,site,dxyz
+        stop
+    endif
+enddo
+if (redo) then
+    if (dbug) write(*,*) 'redo: ', site0
+    k = 0
+    do
+        k = k+1
+        newsite = site0 + k*0.5*dxyz
+        if (newsite(2) < 1 .or. newsite(2) > NY .or. newsite(3) < 1 .or. newsite(3) > NZ) then
+            write(*,*) 'ERROR: add_vacant_site: reached grid limits (b): ',k,site,dxyz
+            newsite = site0 + (k-1)*0.5*dxyz
+            write(*,*) newsite,occupancy(newsite(1),newsite(2),newsite(3))%indx(1)
+            stop
+        endif
+    enddo
+endif
+if (dbug) write(*,'(a,4i6)') 'newsite: ',newsite
+occupancy(newsite(1),newsite(2),newsite(3))%indx = 0
+if (dbug) write(*,'(a,7i6)') 'site, vacant site: ',site,newsite
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Locate a free slot in a site adjacent to site1: site2 (freeslot)
+! Returns freeslot = 0 if there is no free space in an adjacent site.
+! The occupancy array occ() can be either occupancy() or big_occupancy(), hence
+! the need for xlim (= NXX or NX)
+!-----------------------------------------------------------------------------------------
+subroutine get_free_slot(occ,xlim,site1,site2,freeslot)
+type(occupancy_type) :: occ(:,:,:)
+integer :: xlim, site1(3), site2(3), freeslot
+logical :: Lwall, Rwall
+integer :: i, indx2(2)
+
+if (site1(1) == 1) then
+    Lwall = .true.
+else
+    Lwall = .false.
+endif
+if (site1(1) == xlim) then
+    Rwall = .true.
+else
+    Rwall = .false.
+endif
+
+if (site1(1) < 1) then
+    write(logmsg,*) 'get_free_slot: bad site1: ',site1
+	call logger(logmsg)
+    stop
+endif
+do i = 1,27
+    if (i == 14) cycle       ! i = 14 corresponds to the no-jump case
+	site2 = site1 + jumpvec(:,i)
+    if (Lwall .and. site2(1) < 1) then
+        cycle
+    endif
+    if (Rwall .and. site2(1) > xlim) then
+        cycle
+    endif
+    if (site2(2) < 1 .or. site2(2) > NY .or. site2(3) < 1 .or. site2(3) > NZ) cycle
+	indx2 = occ(site2(1),site2(2),site2(3))%indx
+	if (indx2(1) >= 0) then         ! not OUTSIDE_TAG or DC
+	    if (indx2(1) == 0) then     ! slot 1 is free
+	        freeslot = 1
+            return
+	    elseif (indx2(2) == 0) then ! slot 2 is free
+	        freeslot = 2
+            return
+        endif
+    endif
+enddo
+freeslot = 0
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Squeeze gaps out of cellist array, adjusting occupancy array.
+!-----------------------------------------------------------------------------------------
+subroutine squeezer(force)
+logical :: force
+integer :: last, kcell, site(3), indx(2), i, j, idc, n, region
+
+!write(*,*) 'squeezer'
+if (ngaps == 0) return
+if (.not.force .and. (ngaps < max_ngaps/2)) return
+if (dbug) write(nflog,*) 'squeezer: ',ngaps,max_ngaps,nlist
+
+last = nlist
+kcell = 0
+n = 0
+do
+    kcell = kcell+1
+    if (cell_list(kcell)%ID == 0) then    ! a gap
+        if (kcell == last) exit
+        do
+            if (last == 0) then
+                write(nflog,*) 'last = 0: kcell: ',kcell
+                stop
+            endif
+            if (cell_list(last)%ID == 0) then
+                last = last-1
+                n = n+1
+                if (n == ngaps) exit
+            else
+                exit
+            endif
+        enddo
+        if (n == ngaps) exit
+        call copycell2cell(cell_list(last),cell_list(kcell),kcell)
+!        cell_list(kcell) = cell_list(last)
+! Note that the DCs that were in cell_list(last)%DCbound(:), which are now in cell_list(kcell)%DCbound(:),
+! have in the DClist(:)%cogbound(:) the old cell index (last), but should have the new index (kcell)
+! Ths is only an issue for a cognate cell
+        last = last-1
+        n = n+1
+    endif
+    if (n == ngaps) exit
+enddo
+nlist = nlist - ngaps
+ngaps = 0
+if (dbug) write(nflog,*) 'squeezed: ',n,nlist
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Copy the contents of cell_list(kfrom) to the entry cell_list(kto)
+! Need to fix up the corresponding cognate_list() entry as well.
+! Note that:
+!   cell = cell_list(kcell)
+!   kcog = cell%cptr%cogID
+!   k = cognate_list(kcog)
+! =>
+!   k = kcell
+!-----------------------------------------------------------------------------------------
+subroutine copycell2cell(cell_from,cell_to,kcell)
+integer :: kcell
+type(cell_type) :: cell_from, cell_to
+integer :: ctype, stype, kcog
+
+!write(*,*) 'copycell2cell: ',kcell
+ctype = cell_from%ctype
+!if (associated(cell_from%cptr)) then
+!	stype = COG_TYPE_TAG
+!else
+!	stype = NONCOG_TYPE_TAG
+!endif
+!if (stype == NONCOG_TYPE_TAG .and. associated(cell_to%cptr)) then
+!    deallocate(cell_to%cptr)
+!endif
+!if (stype == COG_TYPE_TAG) then
+!    if (.not.associated(cell_to%cptr)) then
+!        allocate(cell_to%cptr)
+!    endif
+!    cell_to%cptr = cell_from%cptr
+!    kcog = cell_to%cptr%cogID
+!    cognate_list(kcog) = kcell
+!elseif (stype /= NONCOG_TYPE_TAG) then
+!    write(*,*) 'ERROR: copycell2cell: istep, ID, ctype, stype: ',istep,cell_from%ID,ctype,stype
+!    stop
+!endif
+cell_to%ID = cell_from%ID
+cell_to%site = cell_from%site
+cell_to%receptor_level = cell_from%receptor_level
+cell_to%receptor_saturation_time = cell_from%receptor_saturation_time
+cell_to%tag = cell_from%tag
+cell_to%ctype = cell_from%ctype
+cell_to%lastdir = cell_from%lastdir
+!cell_to%entrytime = cell_from%entrytime
+cell_to%birthtime = cell_from%birthtime
+if (cell_from%ctype == 0) then
+    write(*,*) 'ERROR: copycell2cell: ctype = 0'
+    stop
+endif
+
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns:
+! 0 if no slots are occupied
+! 1 if slot 1 is occupied
+! 2 if slot 2 is occupied
+! 3 if both slots are occupied
+!--------------------------------------------------------------------------------
+integer function getslots(site)
+integer :: site(3)
+integer :: k
+
+getslots = 0
+do k = 1,2
+    if (occupancy(site(1),site(2),site(3))%indx(k) > 0) then
+        getslots = getslots + k
+    endif
+enddo
+end function
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+integer function neighbourhoodCount(site)
+integer :: site(3)
+integer :: site2(3), k, count
+
+count = 0
+do k = 1,27
+	site2 = site + jumpvec(:,k)
+	if (site2(1) < 1 .or. site2(1) > NX) cycle
+	if (site2(2) < 1 .or. site2(2) > NY) cycle
+	if (site2(3) < 1 .or. site2(3) > NZ) cycle
+	if (occupancy(site2(1),site2(2),site2(3))%indx(1) >= 0) then
+		count = count + 1
+	endif
+enddo
+neighbourhoodCount = count
+end function
+
+!-----------------------------------------------------------------------------------------
+! For a location xyz, check that the occupancy() info is consistent with the info in
+! the cell_list() entries corresponding to occupancy()%indx (if any).  There could be
+! 0, 1, or 2 cell_list() entries.
+!-----------------------------------------------------------------------------------------
+subroutine checkslots(msg,xyz)
+character*(*) :: msg
+integer :: xyz(3)
+integer :: indx(2), k, cells, slots, site(3)
+logical :: occ(2)
+
+occ = .false.
+cells = 0
+slots = getslots(xyz)
+indx = occupancy(xyz(1),xyz(2),xyz(3))%indx
+do k = 1,2
+    if (indx(k) > 0) then
+        cells = cells + k
+        occ(k) = .true.
+        site = cell_list(indx(k))%site
+        if (xyz(1) /= site(1) .or. xyz(2) /= site(2) .or. xyz(3) /= site(3)) then
+            write(*,'(a,a,8i6)') msg,' checkslots: site error: ',k,xyz,site
+            stop
+        endif
+    elseif (indx(1) < 0) then
+        write(*,*) msg,' checkslots: indx: ',xyz,indx
+        stop
+    endif
+enddo
+if (slots /= cells) then
+    write(*,'(a,a,6i4,2L2)') msg,' checkslots: mismatch: ',xyz,slots,cells,occ
+    stop
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine check(msg,x,y,z)
+character*(*) :: msg
+integer :: x,y,z,slots,k,indx(2),site(3)
+logical :: occ(2)
+
+site = (/x,y,z/)
+slots = getslots(site)
+occ = .false.
+indx = occupancy(x,y,z)%indx
+do k = 1,2
+    if (cell_list(indx(k))%ctype > 0) occ(k) = .true.
+enddo
+if (slots == 1 .and. (.not.occ(1) .or. occ(2))) then
+    write(*,*) 'Bad check: ',msg,x,y,z,slots,occ
+    stop
+endif
+if (slots == 2 .and. (.not.occ(2) .or. occ(1))) then
+    write(*,*) 'Bad check: ',msg,x,y,z,slots,occ
+    stop
+endif
+if (slots == 3 .and. .not.(occ(1) .and. occ(2))) then
+    write(*,*) 'Bad check: ',msg,x,y,z,slots,occ
+    stop
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine checker
+integer :: ic,x,y,z,slots,slot,cells,k,indx(2),site(3)
+integer, allocatable :: tot(:)
+logical :: occ(2)
+
+allocate(tot(NX))
+do x = 1,NX
+    tot(x) = 0
+    do y = 1,NY
+        do z = 1,NZ
+            site = (/x,y,z/)
+            slots = getslots(site)
+            cells = 0
+            occ = .false.
+            indx = occupancy(x,y,z)%indx
+            do k = 1,2
+                if (indx(k) > 0) then
+                    tot(x) = tot(x) + 1
+                    cells = cells + k
+                    occ(k) = .true.
+                    site = cell_list(indx(k))%site
+                    if (x /= site(1) .or. y /= site(2) .or. z /= site(3)) then
+                        write(*,'(a,2i2,2i7,6i4)') 'checker: site error: ',k,indx(k),cell_list(indx(k))%ID,x,y,z,site
+                        stop
+                    endif
+                endif
+            enddo
+            if (slots /= cells) then
+                write(*,'(a,6i4,2L2)') 'checker: mismatch: ',x,y,z,slots,cells,occ
+                stop
+            endif
+        enddo
+    enddo
+enddo
+
+do ic = 1,nlist
+    if (cell_list(ic)%ID == 0) cycle  ! gap
+    site = cell_list(ic)%site
+    indx = occupancy(site(1),site(2),site(3))%indx
+    if (ic == indx(1)) then
+        slot = 1
+    elseif (ic == indx(2)) then
+        slot = 2
+    else
+        write(*,'(a,7i6)') 'ERROR: checker: bad indx: ',ic,site,indx
+        stop
+    endif
+enddo
+deallocate(tot)
+write(*,*) 'checked OK: ',' nlist: ',nlist
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine checkcellsite(kcell)
+integer :: kcell
+integer :: id,site(3)
+
+site = cell_list(kcell)%site
+id = cell_list(kcell)%ID
+write(*,'(a,2i8,3i4,4i8)') 'cell: site,indx: ',kcell,id,site,occupancy(site(1),site(2),site(3))%indx
+site = cell_list(kcell)%site
+id = cell_list(kcell)%ID
+write(*,'(a,2i8,3i4,4i8)') 'big_: site,indx: ',kcell,id,site,occupancy(site(1),site(2),site(3))%indx
+end subroutine
+
+
+!-----------------------------------------------------------------------------------------
+! Checks the two sites (before and after jump) to see if the one free slot is always #2
+! HAPPENS ALL THE TIME
+!-----------------------------------------------------------------------------------------
+subroutine check_site_indx(site1,site2)
+integer :: site1(3),site2(3)
+integer :: indx(2)
+
+indx = occupancy(site1(1),site1(2),site1(3))%indx
+if (indx(1) == 0 .and. indx(2) /= 0) write(*,*) 'check_site_indx: ',site1,indx
+indx = occupancy(site2(1),site2(2),site2(3))%indx
+if (indx(1) == 0 .and. indx(2) /= 0) write(*,*) 'check_site_indx: ',site1,indx
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine motility_calibration
+integer :: ic,id,k,ds(3), imin,isub
+integer :: NTcells, nvar0, nvar, ntime2
+integer :: ns = 10000
+integer :: npaths = 20
+integer :: npos = 301
+integer :: nbeta = 30, nrho = 50
+integer :: ibeta, irho, kpath
+real(REAL_KIND) :: dt, time1 = 5, time2 = 15   ! minutes (used for ICB paper results)
+real(REAL_KIND) :: tagrad = 10
+real(REAL_KIND) :: dbeta, drho
+real(REAL_KIND) :: betamin = 0.25, betamax = 0.9		! 0.25 - 0.90 for Model_N, 0.15 - 0.80 for Model_M
+real(REAL_KIND) :: rhomin = 0.20, rhomax = 0.85			! 0.20 - 0.85 for Model_N, 0.20 - 0.85 for Model_M
+real(REAL_KIND) :: Cm,speed,ssum,d
+integer, allocatable :: tagid(:), tagseq(:), tagsite(:,:,:), pathcell(:)
+integer, allocatable :: prevsite(:,:)   ! for mean speed computation
+real(REAL_KIND), allocatable :: Cm_array(:,:), S_array(:,:)
+type(cell_type) :: cell
+logical :: ok
+
+write(*,*) 'motility_calibration'
+
+NTcells = NX*NY*NZ
+if (motility_save_paths) then
+!        allocate(path(3,npaths,0:nvar))
+    allocate(pathcell(npaths))
+endif
+
+ntime2 = time2
+nvar0 = time1
+nvar = time2    ! number of minutes to simulate
+dt = DELTA_T*nsteps_per_min
+TagRadius = tagrad
+
+if (motility_param_range) then
+	drho = (rhomax-rhomin)/(nrho-1)
+	dbeta = (betamax-betamin)/(nbeta-1)
+elseif (n_multiple_runs > 1) then
+	nbeta = n_multiple_runs
+	nrho = 1
+	betamin = beta
+	rhomin = rho
+	drho = 0
+	dbeta = 0
+else
+	nbeta = 1
+	nrho = 1
+	betamin = beta
+	rhomin = rho
+	drho = 0
+	dbeta = 0
+endif
+
+allocate(Cm_array(nrho,nbeta))
+allocate(S_array(nrho,nbeta))
+
+write(*,*) 'nbeta,nrho: ',nbeta,nrho
+do ibeta = 1,nbeta
+    do irho = 1,nrho
+	    rho = rhomin + (irho-1)*drho
+	    beta = betamin + (ibeta-1)*dbeta
+	    write(*,'(a,2i3,2f6.2)') ' beta, rho: ',ibeta,irho,BETA,RHO
+	    call compute_dirprobs
+    	    call PlaceCells(ok)
+    	    if (.not.ok) stop
+!            call make_split(.true.)
+            if (nlist > 0) then
+    	        write(*,*) 'make tag list: NTcells,nlist,ntagged: ',NTcells,nlist,ntagged
+
+                allocate(tagseq(NTcells))
+                allocate(tagid(ntagged))
+                allocate(tagsite(3,ntagged,0:nvar))
+                tagseq = 0
+                k = 0
+    	        kpath = 0
+                do ic = 1,nlist
+                    if (cell_list(ic)%tag == TAGGED_CELL) then
+                        id = cell_list(ic)%ID
+                        k = k+1
+                        tagid(k) = id
+                        tagseq(id) = k
+                        tagsite(:,k,0) = cell_list(ic)%site
+						if (motility_save_paths) then
+							if (kpath < npaths) then
+								kpath = kpath + 1
+								pathcell(kpath) = ic
+							endif
+						endif
+                    endif
+                enddo
+            endif
+
+        ns = min(ns,nlist)
+        allocate(prevsite(3,ns))
+        do ic = 1,ns
+            prevsite(:,ic) = cell_list(ic)%site
+        enddo
+        ssum = 0
+
+        !
+        ! Now we are ready to run the simulation
+        !
+        if (motility_save_paths) then
+            open(nfpath,file='path.out',status='replace')
+            write(nfpath,'(i3,a)') npaths,' paths'
+        endif
+
+		istep = 0
+        do imin = 1,nvar
+            do isub = 1,nsteps_per_min
+				istep = istep + 1
+                call mover(ok)
+                if (.not.ok) stop
+                if (.not.SIMULATE_2D) then
+	                call squeezer(.false.)
+	            endif
+                do ic = 1,ns
+                    ds = cell_list(ic)%site - prevsite(:,ic)
+                    prevsite(:,ic) = cell_list(ic)%site
+                    d = sqrt(real(ds(1)*ds(1) + ds(2)*ds(2) + ds(3)*ds(3)))
+                    ssum = ssum + d*DELTA_X/DELTA_T
+                enddo
+                if (motility_save_paths) then
+                    k = (imin-1)*nsteps_per_min + isub
+                    if (k >= nvar0*nsteps_per_min .and. k < nvar0*nsteps_per_min + npos) then
+                        write(nfpath,'(160i4)') (cell_list(pathcell(kpath))%site(1:2),kpath=1,npaths)
+                    endif
+                endif
+            enddo
+            write(*,*) 'speed: ',ssum/(ns*nsteps_per_min*imin)
+
+            do ic = 1,nlist
+                cell = cell_list(ic)
+                if (cell%tag == TAGGED_CELL) then
+                    id = cell%ID
+                    k = tagseq(id)
+                    tagsite(:,k,imin) = cell%site
+!                   if (k < 20) write(*,*) 'site: ',cell%ID,cell%site
+                endif
+            enddo
+        enddo
+
+        call compute_Cm(tagsite,ntagged,nvar0,nvar,dt,Cm)
+        speed = ssum/(ns*nvar*nsteps_per_min)
+        write(*,'(a,2f8.2)') 'speed, Cm: ',speed,Cm
+        if (allocated(tagid))   deallocate(tagid)
+        if (allocated(tagseq))  deallocate(tagseq)
+        if (allocated(tagsite)) deallocate(tagsite)
+	enddo
+enddo
+if (allocated(pathcell)) deallocate(pathcell)
+deallocate(Cm_array)
+deallocate(S_array)
+if (motility_save_paths) then
+    close(nfpath)
+endif
+
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns the number of cells on the site offset by (x,y,z) from site(:)
+!--------------------------------------------------------------------------------
+integer function sitecells(site,x,y,z)
+integer :: site(3),x,y,z
+integer :: k,indx(2)
+
+indx = occupancy(site(1)+x,site(2)+y,site(3)+z)%indx
+sitecells = 0
+do k = 1,2
+    if (indx(k) > 0) sitecells = sitecells + 1
+enddo
+end function
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine check_zdistribution
+real(REAL_KIND) :: tot(NZ)
+integer :: kcell, site(3)
+
+tot = 0
+do kcell = 1,nlist
+    if (cell_list(kcell)%ID == 0) cycle
+    site = cell_list(kcell)%site
+    tot(site(3)) = tot(site(3)) + 1
+enddo
+tot = tot/nlist
+!write(*,'(a,i8,2f6.3)') 'z distribution: ',nlist,tot(NZ/2+10),tot(NZ/2-10)
+!write(*,'(10f6.3)') tot
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Initial cell position data is loaded into occupancy() and cell_list().
+! The 
+!-----------------------------------------------------------------------------------------
+subroutine PlaceCells_old(ok)
+logical :: ok
+integer :: x, y, z, kcell, site(3)
+integer :: gen, tag, region, ctype
+integer :: x0
+real(REAL_KIND) :: R, rsite(3)
+integer :: kpar = 0
+
+ok = .false.
+write(nflog,*) nlength,nradius,nplug
+write(nflog,*) NX,NY,NZ
+istep = 0
+gen = 1
+ctype = 1
+region = 1
+tag = 0
+x0 = NX/2 - nplug/2
+kcell = 0
+do x = x0,x0+nplug-1
+	do y = 1,NY
+		do z = 1,NZ
+			if (occupancy(x,y,z)%indx(1) == 0) then ! vacant site
+				kcell = kcell + 1
+				site = (/x,y,z/)
+				gen = 1
+				region = 0	! don't know about regions yet
+				ctype = TROPHO_CELL
+				tag = 0
+				call create_Tcell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+				if (.not.ok) return
+				occupancy(x,y,z)%indx(1) = kcell
+			endif
+		enddo
+	enddo
+enddo
+NTcells0 = kcell
+nlist = NTcells0
+NTcells = NTcells0
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine diffusion_calibration
+!!!use ifport
+integer :: x, y, z, istep
+integer, parameter :: Ntimes = 50   !500
+real(REAL_KIND) :: t1, t2, Cnumeric(Ntimes),Canalytic(Ntimes)
+logical :: ok
+
+write(*,*) 'diffusion_calibration: '
+!call init_cytokine
+
+x = NX/4
+call analytical_soln(x,Canalytic,Ntimes)
+call PlaceCells(ok)
+if (.not.ok) stop
+!call make_split(.true.)
+
+!t1 = timef()
+!call cpu_time(t1)
+!t2 = timef()
+!call cpu_time(t2)
+!write(*,'(a,f10.2)') 'Time: ',t2-t1
+write(nfout,*) 'NX, x, NDIFFSTEPS: ',NX,x,NDIFFSTEPS
+do istep = 1,Ntimes
+    write(nfout,'(i6,f8.2,2f8.4)') istep,istep*DELTA_T,Cnumeric(istep),Canalytic(istep)
+enddo
+
+call wrapup
+stop
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! A(n) = 2*Int[0,L](C0(x).cos(n.pi.x/L).dx)
+! with C0(x) = 1  x < L/2
+!            = 0  x > L/2
+! L = NX*DX
+! Site i corresponds to x = (i - 1/2)DX
+! With n = 2m-1, the integral for A gives for m = 1,2,3,...:
+! B(m) = A(n) = (-1)^m.2/(pi*n), other A(n) = 0
+! and B(0) = 0.5
+! and solution is the series:
+! C(x,t) = B(0) + Sum[m=1,...] B(m).cos(n.pi.x/L).exp(-K.t.(n*pi/L)^2)
+!-----------------------------------------------------------------------------------------
+subroutine analytical_soln(xsite,C,Ntimes)
+integer :: xsite, Ntimes
+real(REAL_KIND) :: C(Ntimes)
+integer, parameter :: Nterms = 100
+real(REAL_KIND) :: DX, DT, x, t, csum, bsum, L, xL, Kdiff, dC, tfac, Kfac, B(0:Nterms)
+integer :: n, m, k
+
+!Kdiff = K_diff(1)
+Kdiff = 2.0e-12         ! m^2/s
+write(*,*) 'DELTA_T: ',DELTA_T, DELTA_X, PI, Kdiff
+DX = DELTA_X*1.0e-6     ! m
+DT = DELTA_T*60         ! s
+L = NX*DX
+B(0) = 0.5d0
+bsum = 0
+do m = 1,Nterms
+    n = 2*m-1
+    B(m) = ((-1)**(m+1))*2/(n*PI)
+!    B1 = (2/(n*PI))*sin(n*PI/2)
+!    write(*,*) m,n,B(m)-B1
+    bsum = bsum + B(m)
+enddo
+
+Kfac = Kdiff*PI*PI/(L*L)
+write(*,*) 'Bsum: ',B(0),bsum
+x = (xsite-0.5)*DX
+xL = PI*x/L
+do k = 1,Ntimes
+    t = k*DT
+    csum = B(0)
+    do m = 1,Nterms
+        n = 2*m-1
+        tfac = exp(-Kfac*n*n*t)
+        dC = B(m)*cos(n*xL)*tfac
+        csum = csum + dC
+!        write(*,'(2i4,3e12.4)') m,n,tfac,dC,csum
+    enddo
+    C(k) = csum
+enddo
+write(*,'(10f7.4)') C
+!write(nfout,*) 'Analytical solution'
+!write(nfout,'(10f7.4)') C
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Distance from the blob centre (units = grids)
+!-----------------------------------------------------------------------------------------
+real(REAL_KIND) function cdistance(site)
+integer :: site(3)
+real(REAL_KIND) :: r(3)
+
+r = site - Centre
+cdistance = norm(r)
+end function
+
+!--------------------------------------------------------------------------------
+! A site is taggable if it is less than a specified distance TagRadius from
+! the centre.
+!--------------------------------------------------------------------------------
+logical function taggable(site)
+integer :: site(3)
+real(REAL_KIND) :: d, r(3)
+
+r = site - Centre
+d = norm(r)
+if (d <= TagRadius) then
+    taggable = .true.
+else
+    taggable = .false.
+endif
+end function
+
+!----------------------------------------------------------------------------------------
+! Check to see if (x,y,z) is outside the grid
+!----------------------------------------------------------------------------------------
+logical function outside_xyz(x,y,z)
+integer :: x, y, z
+outside_xyz = .true.
+if (x < 1 .or. x > NX) return
+if (y < 1 .or. y > NY) return
+if (z < 1 .or. z > NZ) return
+outside_xyz = .false.
+end function
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_dimensions(NX_dim,NY_dim,NZ_dim) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
+use, intrinsic :: iso_c_binding
+integer(c_int) :: NX_dim,NY_dim,NZ_dim
+
+NX_dim = NX
+NY_dim = NY
+NZ_dim = NZ
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! The test case has two chemokines and two associated receptor types.
+! Each receptor has the same strength.  The difference in the effects of the two
+! chemokine-receptor pairs is determined by the chemokine gradient parameters.
+!-----------------------------------------------------------------------------------------
+subroutine chemokine_setup
+integer :: x, y, z, kcell
+type(cell_type), pointer :: cell
+
+!call chemo_p_setup
+
+! Set up a test case.
+
+grad_dir(1,:) = [1, 0, 1]
+grad_dir(2,:) = [1, 0, 1]
+
+! Chemokines
+!===========
+! Instead of solving for the chemokine concentrations, the chemokine gradient is specified. 
+chemo(1)%name = 'Chemokine_1'
+if (chemo(1)%used) then
+	if (allocated(chemo(1)%grad)) deallocate(chemo(1)%grad)
+	allocate(chemo(1)%grad(3,NX,NY,NZ))
+	do x = 1,NX
+		do y = 1,NY
+			do z = 1,NZ
+				chemo(1)%grad(:,x,y,z) = grad_amp(1)*grad_dir(1,:)
+			enddo
+		enddo
+	enddo
+endif
+chemo(2)%name = 'Chemokine_2'
+if (chemo(2)%used) then
+	if (allocated(chemo(2)%grad)) deallocate(chemo(2)%grad)
+	allocate(chemo(2)%grad(3,NX,NY,NZ))
+	do x = 1,NX
+		do y = 1,NY
+			do z = 1,NZ
+				chemo(2)%grad(:,x,y,z) = grad_amp(2)*grad_dir(2,:)
+			enddo
+		enddo
+	enddo
+endif
+
+! Receptors
+!==========
+receptor(1)%name = 'Receptor_1'
+receptor(1)%chemokine = 1
+receptor(1)%used = chemo(receptor(1)%chemokine)%used
+receptor(1)%sign = 1
+receptor(1)%strength = 1.0
+receptor(2)%name = 'Receptor_2'
+receptor(2)%used = .false.
+receptor(2)%chemokine = 2
+receptor(2)%used = chemo(receptor(2)%chemokine)%used
+receptor(2)%sign = 1
+receptor(2)%strength = 1.0
+
+! Cells
+!======
+do kcell = 1,nlist
+	cell => cell_list(kcell)
+	cell%receptor_saturation_time = 0
+	cell%receptor_level(1) = 1
+	cell%receptor_level(2) = 1
+enddo
+end subroutine
+
+
+!-----------------------------------------------------------------------------------------
+! Each cell has a varindex, and for Mphase the second sphere is varindex+1
+!-----------------------------------------------------------------------------------------
+subroutine forces1(force,fmax,ok)
+real(REAL_KIND) :: fmax, force(:,:,:)
+logical :: ok
+integer :: k1, k2, kcell, knbr, iv(2)
+integer :: isphere1, isphere2, nspheres1, nspheres2
+real(REAL_KIND) :: R1, c1(3), R2, c2(3), v(3), d, d_hat, dF, F(3,2)
+logical :: incontact, Mphase, use_force
+type(cell_type), pointer :: cp1, cp2
+integer :: nvar	! nv = ncells + # of Mphase cells
+
+ok = .true.
+if (ncells == 1 .and. cell_list(1)%Iphase) then
+	force(:,1,:) = 0
+	return
+endif
+!write(logmsg,*) 'forces: ',istep,ncells,ncells_mphase
+!call logger(logmsg)
+use_force = .true.
+fmax = 0
+do k1 = 1,ncells
+	kcell = perm_index(k1)
+	cp1 => cell_list(kcell)
+	Mphase = .not.cp1%Iphase
+	if (cp1%Iphase) then
+		nspheres1 = 1
+!		iv(1) = cp1%varindex
+	else
+		nspheres1 = 2
+!		iv(1) = cp1%varindex
+!		iv(2) = cp1%varindex + 1
+	endif
+	F = 0
+	if (use_force) then
+	do k2 = 1,cp1%nbrs
+		knbr = cp1%nbrlist(k2)%indx
+		cp2 => cell_list(knbr)
+		if (cp2%Iphase) then
+			nspheres2 = 1
+		else
+			nspheres2 = 2
+		endif
+		do isphere1 = 1,nspheres1
+			R1 = cp1%radius(isphere1)
+			c1 = cp1%centre(:,isphere1)
+			!if (isphere1 == 1) then
+			!	iv = cp1%varindex
+			!else
+			!	iv = cp1%varindex + 1
+			!endif
+			do isphere2 = 1,nspheres2
+				R2 = cp2%radius(isphere2)
+				c2 = cp2%centre(:,isphere2)
+				v = c1 - c2
+				d = sqrt(dot_product(v,v))
+				v = v/d
+				incontact = cp1%nbrlist(k2)%contact(isphere1,isphere2)
+				dF = get_force(R1,R2,d,incontact,ok)	! returns magnitude and sign of force
+                if (.not.ok) then
+                    stop
+                endif
+				if (isphere1 == 1) F(:,isphere1) = F(:,isphere1) + dF*v
+				if (Mphase .and. isphere1 == 2) F(:,isphere1) = F(:,isphere1) + dF*v
+			enddo
+		enddo
+	enddo
+	endif
+	if (Mphase) then	! compute force between separating spheres, based on deviation from desired d = cp1%d
+		c1 = cp1%centre(:,1)
+		c2 = cp1%centre(:,2)
+		v = c1 - c2
+		d = sqrt(dot_product(v,v))
+		v = v/d
+		d_hat = max(cp1%mitosis*cp1%d_divide,small_d)
+		dF = get_separating_force(d,d_hat)
+!		write(*,'(a,3e12.3)') 'dF: ',d,d_hat,dF
+		F(:,1) = F(:,1) + dF*v	! dF acts in the direction of v on sphere #1 when dF > 0
+		F(:,2) = F(:,2) - dF*v	! dF acts in the direction of -v on sphere #2 when dF > 0
+	endif
+	force(:,k1,1) = F(:,1)
+	fmax = max(fmax,sqrt(dot_product(F(:,1),F(:,1))))
+	if (Mphase) then
+		force(:,k1,2) = F(:,2)
+!		write(*,'(i4,3f8.3,4x,3f8.3)') kcell,F(1,:),F(2,:)
+		fmax = max(fmax,sqrt(dot_product(F(:,2),F(:,2))))
+	endif
+	
+enddo
+
+end subroutine
 

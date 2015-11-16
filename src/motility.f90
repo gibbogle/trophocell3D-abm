@@ -357,22 +357,6 @@ occupancy(site2(1),site2(2),site2(3))%indx(1) = kcell
 end subroutine
 
 !--------------------------------------------------------------------------------
-! Assume a parabolic velocity distribution = f(r)
-! f(0) = Vmax
-! f(R) = 0
-! df(0)/dr = 0
-! ==> f(r) = Vmax(1 - (r/R)^2)
-!--------------------------------------------------------------------------------
-real(REAL_KIND) function FlowVelocity(site)
-integer :: site(3)
-real(REAL_KIND) :: r
-integer :: ndist = 2
-
-r = sqrt((site(2)-y0)**2 + (site(3)-z0)**2)
-FlowVelocity = BG_flow_amp*(1 - (r/nradius)**ndist)
-end function
-
-!--------------------------------------------------------------------------------
 ! 2D motility
 ! In this case only one cell can occupy a site - no slot 2 - and no passing.
 ! This is valid because cells are not crammed together in the petri dish.

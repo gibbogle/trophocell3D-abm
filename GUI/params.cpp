@@ -5,11 +5,7 @@ Params::Params()
 {
 	PARAM_SET params[] = {
 
-{"DELTA_X", 10, 0, 0,
-"Grid spacing",
-"Size of lattice grid in um."},
-
-{"DELTA_T", 1.0, 0, 0,
+{"DELTA_T", 10.0, 0, 0,
 "Time step",
 "Time step in minutes"},
 
@@ -28,6 +24,10 @@ Params::Params()
 "Length of the simulation.\n\
 [days]"},
 
+{"SETTLING_TIME", 1.0, 0, 0,
+"Settling time",
+"Settling time in hours."},
+
 {"SEED1", 12345, 0, 0,
 "First RNG seed",
 "The random number generator is seeded by a pair of integers.  Changing the seed generates a different Monte Carlo realization."},
@@ -36,25 +36,37 @@ Params::Params()
 "Second RNG seed",
 "The random number generator is seeded by a pair of integers.  Changing the seed generates a different Monte Carlo realization."},
 
-{"NCPU", 1, 1, 8,
+{"NCPU", 4, 1, 8,
 "Number of CPUs",
 "Number of CPUs to use for the simulation (currently only one used)."},
 
-{"NLENGTH", 100, 0, 0,
+{"TUBE_LENGTH", 1000, 0, 0,
 "Tube length",
-"Length of the tube in grids."},
+"Length of the tube (um)."},
 
-{"NRADIUS", 10, 0, 0,
+{"TUBE_RADIUS", 100, 0, 0,
 "Tube radius",
-"Tube radius in grids"},
+"Tube radius (um)"},
 
-{"NPLUG", 10, 0, 0,
-"Plug length",
-"Plug length in grids"},
+{"PLUG_ZMIN", 20, 0, 0,
+"Plug minimum z",
+"Plug minimum z (um)"},
 
-{"NT_ANIMATION", 10, 0, 0,
+{"PLUG_ZMAX", 120, 0, 0,
+"Plug maximum z",
+"Plug maximum z (um)"},
+
+{"PLUG_HMAX", 50, 0, 0,
+"Plug maximum height",
+"Plug maximum height (um)"},
+
+{"RAVERAGE", 5, 0, 0,
+"Average cell radius",
+"Average cell radius (um)"},
+
+{"NT_ANIMATION", 1, 0, 0,
  "Animation interval (timesteps)",
- "Interval between animation screen updates (timesteps).  One timestep = 15 sec."},
+ "Interval between animation screen updates (timesteps).Global::"},
 
 {"DELAY", 100, 0, 0,
  "Simulation delay",
@@ -80,17 +92,63 @@ Params::Params()
  "Background flow amplitude",
  "Amplitude of the background flow (constant)"},
 
-{"KDRAG", 1, 0, 0,
-"Drag weight: Kdrag",
-"Weighting for drag vs. chemotaxis"},
+    {"A_SEPARATION", 1.0, 0, 0,
+    "Separation force factor",
+    "During mitosis the two capped spheres are effectively connected by a nonlinear spring. \n\
+    The length of the spring s is determined by the mitosis level, and if the centre-centre distance is d \n\
+    the contribution to the force of repulsion between the spheres is a_separation*(s-d)^3."},
 
-{"KADHESION", 0.1, 0, 0,
-"Adhesion weight: Kadh",
-"Weighting for site attractiveness based on proximity"},
+    {"A_FORCE", 1., 0, 0,
+    "Repulsion force factor 'a'",
+    "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+    The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+    The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+    The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+    After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
 
-{"KSTAY", 0.2, 0, 0,
-"Stay weight: Kstay",
-"Weighting for extra attractiveness of current site - i.e. immobility"},
+    {"C_FORCE", 0.2, 0, 0,
+    "Attraction force factor 'c'",
+    "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+    The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+    The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+    The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+    After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+    {"X0_FORCE", 0.7, 0, 0,
+    "Left asymptote 'x0'",
+    "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+    The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+    The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+    The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+    After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+    {"X1_FORCE", 1.3, 0, 0,
+    "Right asymptote 'x1'",
+    "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+    The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+    The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+    The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+    After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+    {"KDRAG", 5, 0, 0,
+     "Drag factor",
+     "Displacement = dt*F/drag"},
+
+    {"FRANDOM",0.1, 0, 0,
+     "Random force factor",
+     "Magnitude of random additive force"},
+
+//{"KDRAG", 1, 0, 0,
+//"Drag weight: Kdrag",
+//"Weighting for drag vs. chemotaxis"},
+
+//{"KADHESION", 0.1, 0, 0,
+//"Adhesion weight: Kadh",
+//"Weighting for site attractiveness based on proximity"},
+
+//{"KSTAY", 0.2, 0, 0,
+//"Stay weight: Kstay",
+//"Weighting for extra attractiveness of current site - i.e. immobility"},
 
 {"SAVE_CELL_POSITIONS", 0, 0, 0,
  "Saved cell positions",

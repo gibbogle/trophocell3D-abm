@@ -8,18 +8,21 @@ contains
 
 !-----------------------------------------------------------------------------------------
 ! Dumb version to start
+! Note that now we seek neighbour only for ALIVE cells, but the neighbours can include
+! WALL cells (which are immobile), because they also exert force.
 !-----------------------------------------------------------------------------------------
 subroutine setup_nbrlists
 type(cell_type), pointer :: cp1, cp2
-real(REAL_KIND) :: R1, c1(3), R2, c2(3), v(3), d2, d, Rsum, dfactor
+real(REAL_KIND) :: R1, c1(3), R2, c2(3), v(3), d2, d, Rsum, dfactor, dmin
 integer :: kcell, k2, k, isphere1, nspheres1, isphere2, nspheres2, nbrs
 type(neighbour_type) :: nbrlist(100)
 logical :: near, incontact, contact(2,2)
 logical :: dbug = .false.
 
+dmin = 1.0e10
 do kcell = 1,nlist
 	cp1 => cell_list(kcell)
-	if (cp1%state == DEAD) cycle
+	if (cp1%state /= ALIVE) cycle
 	!if (cp1%Iphase) then
 	!	nspheres1 = 1
 	!else
@@ -30,7 +33,7 @@ do kcell = 1,nlist
 	do k2 = 1,nlist
 		if (k2 == kcell) cycle
 		cp2 => cell_list(k2)
-		if (cp2%state == DEAD) cycle
+		if (cp2%state > ALIVE) cycle
 		!if (cp2%Iphase) then
 		!	nspheres2 = 1
 		!else
@@ -50,6 +53,8 @@ do kcell = 1,nlist
 				v = c2 - c1
 				d2 = dot_product(v,v)
 				d = sqrt(d2)
+				dmin = min(d,dmin)
+!				write(*,'(a,9f8.1)') 'c1,R1,c2,R2,d: ',c1,R1,c2,R2,d
 				if (use_hysteresis) then
 					if (d < d_nbr_limit) then
 						if (dbug) write(*,'(5f8.2)') R1,R2,Rsum,d,d_nbr_limit
@@ -84,14 +89,15 @@ do kcell = 1,nlist
 			endif
 			nbrlist(nbrs)%indx = k2
 			nbrlist(nbrs)%contact = contact
+!			if (cp2%state == WALL) write(*,*) 'WALL nbr: ',kcell,k2
 		endif
 	enddo
 	cp1%nbrs = nbrs
 	cp1%nbrlist(1:nbrs) = nbrlist(1:nbrs)
-    !if (kcell == 10 .or. kcell == 30) then  !!!!!!!!!! #10 does not see #30, and #30 does not see #10 !!!!!! this is the problem
-    !	write(*,'(a,3i4)') 'kcell: ',kcell,nspheres1,nbrs
-	   ! write(*,'(10i6)') nbrlist(1:nbrs)%indx 
-    !endif
+    if (kcell == 1291) then 
+    	write(*,'(a,3i4)') 'kcell: ',kcell,nspheres1,nbrs
+	    write(*,'(10i6)') nbrlist(1:nbrs)%indx 
+    endif
 enddo
 end subroutine
 
@@ -103,7 +109,7 @@ integer :: kcell, max_nbrs
 !write(nflog,*) 'update_all_nbrlists'
 max_nbrs = 0
 do kcell = 1,nlist
-	if (cell_list(kcell)%state == DEAD) cycle
+	if (cell_list(kcell)%state /= ALIVE) cycle
 	call update_nbrlist(kcell)
 	max_nbrs = max(max_nbrs,cell_list(kcell)%nbrs)
 enddo
@@ -135,7 +141,7 @@ do k2 = 1,cp1%nbrs
     knbr = cp1%nbrlist(k2)%indx
     if (knbr == kcell) cycle
     cp2 => cell_list(knbr)
-	if (cp2%state == DEAD) cycle
+	if (cp2%state > ALIVE) cycle
     call get_dist(c1,ns1,cp2,d)
     if (d < d_nbr_limit) then
         call add_to_list(knbr,d,nbrlist,nbr_d,nbrs)
@@ -144,7 +150,7 @@ do k2 = 1,cp1%nbrs
         knbr = cp2%nbrlist(k3)%indx
         if (knbr == kcell) cycle
         cp3 => cell_list(knbr)
-		if (cp3%state == DEAD) cycle
+		if (cp3%state > ALIVE) cycle
         call get_dist(c1,ns1,cp3,d)
         if (d < d_nbr_limit) then
             call add_to_list(knbr,d,nbrlist,nbr_d,nbrs)
@@ -167,7 +173,7 @@ enddo
 do i = 1,cp1%nbrs
 	knbr = cp1%nbrlist(i)%indx
     cp2 => cell_list(knbr)
-	if (cp2%state == DEAD) cycle
+	if (cp2%state > ALIVE) cycle
 	inlist = .false.
     do k2 = 1,cp2%nbrs
 		if (kcell == cp2%nbrlist(k2)%indx) then

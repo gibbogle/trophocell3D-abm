@@ -32,7 +32,7 @@ struct cell_pos {
 	int tag;
 	int x, y, z;
 	double diameter;
-	double state;
+    int state;
 };
 typedef cell_pos CELL_POS;
 
@@ -45,7 +45,7 @@ typedef bond_pos BOND_POS;
 class MyVTK
 {
 public:
-    MyVTK(QWidget *, QWidget *);
+    MyVTK(QWidget *, QWidget *, double, double);
 	~MyVTK();
 
     void test_canvas(QWidget *test_page);
@@ -60,6 +60,7 @@ public:
     void makeLines();
 	void getTCColor(int state, double *r, double *g, double *b);
 	void setColor(double *r, double *g, double *b, int col[]);
+    void setWallOpacity(double);
 	bool startPlayer(QString, QTimer *, bool);
 	bool nextFrame();
 	void pause();
@@ -83,6 +84,7 @@ public:
 	vtkPolyDataMapper *DcellMapper;
 	vtkPolyDataMapper *bondMapper;
     vtkPolyDataMapper *cylMapper;
+    vtkSmartPointer<vtkActor> cylactor;
 //	vtkMPEG2Writer *mpg;
 //	vtkSmartPointer<vtkPNGWriter> writer;
 //	vtkSmartPointer<vtkBMPWriter> writer;

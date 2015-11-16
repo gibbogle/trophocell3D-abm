@@ -76,7 +76,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -252,6 +252,203 @@ padding: 8px
             </property>
            </widget>
           </widget>
+          <widget class="QWidget" name="tab_force">
+           <attribute name="title">
+            <string>Force</string>
+           </attribute>
+           <widget class="QGroupBox" name="groupBox_force">
+            <property name="geometry">
+             <rect>
+              <x>150</x>
+              <y>130</y>
+              <width>271</width>
+              <height>201</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="gridLayoutWidget_3">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>251</width>
+               <height>181</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_GLGL11">
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="line_A_SEPARATION">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QMyLabel" name="label_A_SEPARATION">
+                <property name="text">
+                 <string>Separation force factor</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="label_A_FORCE">
+                <property name="text">
+                 <string>Cell-cell force factor 'a'</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="line_A_FORCE">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QMyLabel" name="label_C_FORCE">
+                <property name="text">
+                 <string>Maximum attraction force 'c'</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="line_C_FORCE">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QMyLabel" name="label_X0_FORCE">
+                <property name="text">
+                 <string>Left asymptote 'x0'</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="line_X0_FORCE">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QMyLabel" name="label_X1_FORCE">
+                <property name="text">
+                 <string>Right asymptote 'x1'</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QLineEdit" name="line_X1_FORCE">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLabel" name="alabel_x0">
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QLabel" name="alabel_x1">
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QMyLabel" name="label_KDRAG">
+                <property name="text">
+                 <string>label_KDRAG</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="line_KDRAG">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QMyLabel" name="label_FRANDOM">
+                <property name="text">
+                 <string>label_FRANDOM</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="line_FRANDOM">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+           <widget class="QLabel" name="alabel_force">
+            <property name="geometry">
+             <rect>
+              <x>190</x>
+              <y>110</y>
+              <width>161</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Cell-cell force parameters</string>
+            </property>
+           </widget>
+          </widget>
           <widget class="QWidget" name="tab_run">
            <attribute name="title">
             <string>Run</string>
@@ -296,8 +493,11 @@ padding: 8px
               <property name="verticalSpacing">
                <number>4</number>
               </property>
-              <item row="13" column="2">
+              <item row="14" column="2">
                <widget class="QLineEdit" name="line_BG_FLOW_AMP">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -312,14 +512,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="0" column="0">
                <widget class="QMyLabel" name="label_DELTA_T">
                 <property name="text">
                  <string>label_DELTA_T</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="0" column="1">
                <spacer name="horizontalSpacer_24">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -332,125 +532,10 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="3" column="2">
+              <item row="0" column="2">
                <widget class="QLineEdit" name="line_DELTA_T">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>60</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>0.25</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QMyLabel" name="label_NDAYS">
-                <property name="mouseTracking">
-                 <bool>false</bool>
-                </property>
-                <property name="toolTip">
-                 <string/>
-                </property>
-                <property name="text">
-                 <string>label_NDAYS</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QMyLabel" name="label_NX">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>NX</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <spacer name="horizontalSpacer_12">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>13</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="0" column="2">
-               <widget class="QSpinBox" name="spin_NX">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>60</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-                <property name="maximum">
-                 <number>999999999</number>
-                </property>
-                <property name="value">
-                 <number>100</number>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QMyLabel" name="label_DELTA_X">
-                <property name="text">
-                 <string>label_DELTA_X</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <spacer name="horizontalSpacer_13">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>13</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="line_DELTA_X">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -469,7 +554,23 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="label_NDAYS">
+                <property name="mouseTracking">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string/>
+                </property>
+                <property name="text">
+                 <string>label_NDAYS</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
                <spacer name="horizontalSpacer_29">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -482,7 +583,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="5" column="0">
+              <item row="3" column="0">
                <widget class="QMyLabel" name="label_SEED1">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -498,7 +599,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="3" column="1">
                <spacer name="horizontalSpacer_30">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -511,7 +612,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="5" column="2">
+              <item row="3" column="2">
                <widget class="QSpinBox" name="spin_SEED1">
                 <property name="maximumSize">
                  <size>
@@ -530,7 +631,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="4" column="0">
                <widget class="QMyLabel" name="label_SEED2">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -546,7 +647,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="4" column="1">
                <spacer name="horizontalSpacer_31">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -559,7 +660,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="6" column="2">
+              <item row="4" column="2">
                <widget class="QSpinBox" name="spin_SEED2">
                 <property name="maximumSize">
                  <size>
@@ -578,7 +679,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="4" column="2">
+              <item row="1" column="2">
                <widget class="QLineEdit" name="line_NDAYS">
                 <property name="maximumSize">
                  <size>
@@ -594,7 +695,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
+              <item row="12" column="0">
                <widget class="QMyLabel" name="label_NT_ANIMATION">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -604,7 +705,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="11" column="1">
+              <item row="12" column="1">
                <spacer name="horizontalSpacer_32">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -617,27 +718,14 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="4" column="3">
+              <item row="1" column="3">
                <widget class="QLabel" name="units_NDAYS">
                 <property name="text">
                  <string>days</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="3">
-               <widget class="QLabel" name="units_DELTA_X">
-                <property name="minimumSize">
-                 <size>
-                  <width>40</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>um</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="1">
+              <item row="5" column="1">
                <spacer name="horizontalSpacer_34">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -650,7 +738,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="7" column="2">
+              <item row="5" column="2">
                <widget class="QSpinBox" name="spin_NCPU">
                 <property name="maximumSize">
                  <size>
@@ -669,71 +757,17 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QMyLabel" name="label_NY">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>NY</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <spacer name="horizontalSpacer_15">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>13</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="1" column="2">
-               <widget class="QSpinBox" name="spin_NY">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>60</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-                <property name="maximum">
-                 <number>999999999</number>
-                </property>
-                <property name="value">
-                 <number>100</number>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QMyLabel" name="label_NLENGTH">
+              <item row="6" column="0">
+               <widget class="QMyLabel" name="label_TUBE_LENGTH">
                 <property name="toolTip">
                  <string>animation update interval</string>
                 </property>
                 <property name="text">
-                 <string>label_NLENGTH</string>
+                 <string>label_TUBE_LENGTH</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
+              <item row="6" column="1">
                <spacer name="horizontalSpacer_35">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -746,8 +780,8 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="8" column="2">
-               <widget class="QLineEdit" name="line_NLENGTH">
+              <item row="6" column="2">
+               <widget class="QLineEdit" name="line_TUBE_LENGTH">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -762,21 +796,21 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="3">
+              <item row="0" column="3">
                <widget class="QLabel" name="units_DELTA_T">
                 <property name="text">
                  <string>min</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
+              <item row="13" column="0">
                <widget class="QMyLabel" name="label_DELAY">
                 <property name="text">
                  <string>label_DELAY</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="2">
+              <item row="13" column="2">
                <widget class="QLineEdit" name="line_DELAY">
                 <property name="maximumSize">
                  <size>
@@ -792,14 +826,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="12" column="3">
+              <item row="13" column="3">
                <widget class="QLabel" name="units_DELAY">
                 <property name="text">
                  <string>ms</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="2">
+              <item row="12" column="2">
                <widget class="QLineEdit" name="line_NT_ANIMATION">
                 <property name="maximumSize">
                  <size>
@@ -812,14 +846,17 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="13" column="0">
+              <item row="14" column="0">
                <widget class="QMyLabel" name="label_BG_FLOW_AMP">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
                  <string>label_BG_FLOW_AMP</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="1">
+              <item row="13" column="1">
                <spacer name="horizontalSpacer_33">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -832,7 +869,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="13" column="1">
+              <item row="14" column="1">
                <spacer name="horizontalSpacer_36">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -845,7 +882,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="7" column="0">
+              <item row="5" column="0">
                <widget class="QMyLabel" name="label_NCPU">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -855,21 +892,21 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="13" column="3">
+              <item row="14" column="3">
                <widget class="QLabel" name="units_BG_FLOW_AMP">
                 <property name="text">
                  <string>um/min</string>
                 </property>
                </widget>
               </item>
-              <item row="14" column="0">
+              <item row="15" column="0">
                <widget class="QMyLabel" name="label_SAVE_CELL_POSITIONS">
                 <property name="text">
                  <string>label_SAVE_CELL_POSITIONS</string>
                 </property>
                </widget>
               </item>
-              <item row="14" column="1">
+              <item row="15" column="1">
                <spacer name="horizontalSpacer_38">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -882,7 +919,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="14" column="2">
+              <item row="15" column="2">
                <widget class="QLineEdit" name="line_SAVE_CELL_POSITIONS">
                 <property name="maximumSize">
                  <size>
@@ -898,17 +935,17 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
-               <widget class="QMyLabel" name="label_NRADIUS">
+              <item row="7" column="0">
+               <widget class="QMyLabel" name="label_TUBE_RADIUS">
                 <property name="toolTip">
                  <string>animation update interval</string>
                 </property>
                 <property name="text">
-                 <string>label_NRADIUS</string>
+                 <string>label_TUBE_RADIUS</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
+              <item row="7" column="1">
                <spacer name="horizontalSpacer_37">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -921,8 +958,112 @@ padding: 8px
                 </property>
                </spacer>
               </item>
+              <item row="7" column="2">
+               <widget class="QLineEdit" name="line_TUBE_RADIUS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QMyLabel" name="label_PLUG_ZMIN">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_PLUG_ZMIN</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <spacer name="horizontalSpacer_39">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="8" column="2">
+               <widget class="QLineEdit" name="line_PLUG_ZMIN">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="3">
+               <widget class="QLabel" name="units_DELTA_X_2">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="3">
+               <widget class="QLabel" name="units_DELTA_X">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QMyLabel" name="label_PLUG_ZMAX">
+                <property name="toolTip">
+                 <string>animation update interval</string>
+                </property>
+                <property name="text">
+                 <string>label_PLUG_ZMAX</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <spacer name="horizontalSpacer_40">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
               <item row="9" column="2">
-               <widget class="QLineEdit" name="line_NRADIUS">
+               <widget class="QLineEdit" name="line_PLUG_ZMAX">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -938,17 +1079,17 @@ padding: 8px
                </widget>
               </item>
               <item row="10" column="0">
-               <widget class="QMyLabel" name="label_NPLUG">
+               <widget class="QMyLabel" name="label_PLUG_HMAX">
                 <property name="toolTip">
                  <string>animation update interval</string>
                 </property>
                 <property name="text">
-                 <string>label_NPLUG</string>
+                 <string>label_PLUG_HMAX</string>
                 </property>
                </widget>
               </item>
               <item row="10" column="1">
-               <spacer name="horizontalSpacer_39">
+               <spacer name="horizontalSpacer_41">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -961,7 +1102,7 @@ padding: 8px
                </spacer>
               </item>
               <item row="10" column="2">
-               <widget class="QLineEdit" name="line_NPLUG">
+               <widget class="QLineEdit" name="line_PLUG_HMAX">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -973,6 +1114,137 @@ padding: 8px
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="3">
+               <widget class="QLabel" name="units_DELTA_X_3">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="3">
+               <widget class="QLabel" name="units_DELTA_X_4">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="3">
+               <widget class="QLabel" name="units_DELTA_X_5">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QMyLabel" name="label_RAVERAGE">
+                <property name="text">
+                 <string>label_RAVERAGE</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="1">
+               <spacer name="horizontalSpacer_42">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="11" column="2">
+               <widget class="QLineEdit" name="line_RAVERAGE">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>10</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="3">
+               <widget class="QLabel" name="units_DELTA_X_6">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QMyLabel" name="label_SETTLING_TIME">
+                <property name="text">
+                 <string>label_SETTLING_TIME</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="line_SETTLING_TIME">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <spacer name="horizontalSpacer_43">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="2" column="3">
+               <widget class="QLabel" name="units_NDAYS_2">
+                <property name="text">
+                 <string>hours</string>
                 </property>
                </widget>
               </item>
@@ -990,6 +1262,9 @@ padding: 8px
             </property>
            </widget>
            <widget class="QGroupBox" name="groupBox_TC">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="geometry">
              <rect>
               <x>400</x>
@@ -1130,6 +1405,9 @@ padding: 8px
             </property>
            </widget>
            <widget class="QGroupBox" name="groupBox_chemo">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="geometry">
              <rect>
               <x>400</x>
@@ -1294,140 +1572,6 @@ padding: 8px
             </property>
             <property name="text">
              <string>Chemokine gradient</string>
-            </property>
-           </widget>
-           <widget class="QGroupBox" name="groupBox_knobs">
-            <property name="geometry">
-             <rect>
-              <x>400</x>
-              <y>270</y>
-              <width>231</width>
-              <height>101</height>
-             </rect>
-            </property>
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QWidget" name="gridLayoutWidget_2">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>10</y>
-               <width>211</width>
-               <height>80</height>
-              </rect>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_knobs">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_KDRAG">
-                <property name="text">
-                 <string>Drag weight Kdrag</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <spacer name="horizontalSpacer_14">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>13</width>
-                  <height>17</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLineEdit" name="line_KDRAG">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_KADHESION">
-                <property name="text">
-                 <string>Adhesion weight Kadh</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <spacer name="horizontalSpacer_16">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>13</width>
-                  <height>17</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLineEdit" name="line_KADHESION">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_KSTAY">
-                <property name="text">
-                 <string>Stay weight Kstay</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <spacer name="horizontalSpacer_17">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>13</width>
-                  <height>17</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="line_KSTAY">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </widget>
-           <widget class="QLabel" name="alabel_knobs">
-            <property name="geometry">
-             <rect>
-              <x>500</x>
-              <y>247</y>
-              <width>41</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Knobs</string>
             </property>
            </widget>
           </widget>
@@ -1595,11 +1739,62 @@ padding: 8px
          <string/>
         </property>
        </widget>
+       <widget class="QSlider" name="slider_opacity">
+        <property name="geometry">
+         <rect>
+          <x>960</x>
+          <y>50</y>
+          <width>160</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>100</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>5</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="alabel">
+        <property name="geometry">
+         <rect>
+          <x>1000</x>
+          <y>30</y>
+          <width>101</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Wall % opacity</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="alabel_2">
+        <property name="geometry">
+         <rect>
+          <x>960</x>
+          <y>70</y>
+          <width>181</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>0                                               100</string>
+        </property>
+       </widget>
        <widget class="QWidget" name="test_page" native="true">
         <property name="geometry">
          <rect>
-          <x>1010</x>
-          <y>170</y>
+          <x>1150</x>
+          <y>320</y>
           <width>200</width>
           <height>300</height>
          </rect>
@@ -2273,8 +2468,6 @@ padding: 8px
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>spin_NX</tabstop>
-  <tabstop>line_DELTA_X</tabstop>
   <tabstop>line_DELTA_T</tabstop>
   <tabstop>line_NDAYS</tabstop>
   <tabstop>spin_SEED1</tabstop>

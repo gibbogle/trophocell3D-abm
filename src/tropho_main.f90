@@ -64,8 +64,9 @@ end do
 
 !runfile = 'running.out'
 
-write(*,*) 'call execute'
+write(*,*) 'call execute:'
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
+write(*,*) 'Nsteps: ',Nsteps
 !call get_dimensions(NX,NY,NZ,Nsteps)
 do jstep = 1,Nsteps
 	call simulate_step(res)

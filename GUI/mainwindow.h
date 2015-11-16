@@ -95,6 +95,7 @@ private slots:
     void on_actionShow_3D_gradient_field_triggered();
 //    void on_line_SPECIAL_CASE_textEdited(QString);
     void on_checkBox_FACS_PLOT_toggled(bool checked);
+    void on_slider_opacity_valueChanged(int value);
     void newFile();
     void open();
     void about();
