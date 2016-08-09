@@ -52,11 +52,14 @@ else (Fortran_COMPILER_NAME STREQUAL "gfortran")
 endif (Fortran_COMPILER_NAME STREQUAL "ifort")
 
 set (SOURCES 
-  "../src/chemokine.f90" 
   "../src/behaviour.f90"
+  "../src/chemokine.f90" 
+  "../src/fmotion.f90"
   "../src/global.f90"
-  "../src/motility.f90"
+  "../src/nbr.f90"
+  "../src/pack.f90"
   "../src/par_zig_mod.f90"
+  "../src/real_kind.f90"
   "../src/tropho3D.f90" 
   "../src/Winsock_c.f90" 
   "../src/clientc.c"
@@ -64,22 +67,5 @@ set (SOURCES
 )
 
 # build executables
-#set (NMPROGRAMS "diagstd" "diagrtb" "proj_modes_bin" "pdbmat")
-#set (EXECUTABLES "NORMA.exe" ${NMPROGRAMS})
-#set (SCRIPTS "gen_pert.sh" "pert_multi_mode.sh")
-
 add_library (tropho3D-abm SHARED ${SOURCES})
 target_link_libraries(tropho3D-abm libws2_32.a libgomp.a)
-#add_executable (tropho_main ../src/tropho_main.f90)
-#target_link_libraries(tropho_main tropho-abm)
-#set_target_properties(tropho_main PROPERTIES LINKER_LANGUAGE Fortran)
-
-#foreach (p ${NMPROGRAMS})
-#  add_executable (${p} "${p}.f")
-#endforeach (p)
-
-# install executables and scripts
-#install (TARGETS ${EXECUTABLES} 
-#         RUNTIME DESTINATION "bin")
-#install (PROGRAMS ${SCRIPTS}
-#         DESTINATION "bin") 
