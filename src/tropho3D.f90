@@ -11,6 +11,9 @@ use global
 use behaviour
 use packer
 use nbr
+use Mesh_Generate
+use sparse
+use m_unista
 use fmotion
 !use diffuse
 !use ode_diffuse_general
@@ -171,11 +174,14 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine save_positions
 integer :: kcell, site(3)
+real(REAL_KIND) :: centre(3)
 
 write(nflog,'(i6,$)') istep
 do kcell = 1,n_cell_positions
-    site = cell_list(kcell)%site
-    write(nflog,'(2i5,$)') site(1:2)
+    !site = cell_list(kcell)%site
+    centre = cell_list(kcell)%centre(:,1)
+    !write(nflog,'(2i5,$)') site(1:2)
+    write(nflog,'(3f10.3,$)') centre(1:3)
 enddo
 write(nflog,*)
 end subroutine
@@ -236,7 +242,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine write_header
-write(nfout,'(a)') '================================================================================================================'
+write(nfout,'(a)') '========================================================================================='
 write(nfout,*)
 write(nfout,'(a10,$)') '      Hour'
 write(nfout,'(a10,$)') '  Timestep'
@@ -518,7 +524,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 ! Pass a list of cell positions and associated data
-! Position is passes as an integer (um) 
+! Position is passes as an integer (um)
 !--------------------------------------------------------------------------------
 subroutine get_scene(nTC_list,TC_list) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_scene
@@ -617,7 +623,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine simulate_step(res) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step 
+!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: hour, nit, nt_hour, kpar=0
@@ -634,13 +640,15 @@ dbug = .false.
 nt_hour = 3600/DELTA_T
 ok = .true.
 istep = istep + 1
+
+n_cell_positions=ncells !**************
 if (n_cell_positions > 0) then
 	call save_positions
 endif
 tnow = istep*DELTA_T
 use_settling = (settle_hrs > 0)
 if (use_settling) then
-	settling = (tnow < settle_hrs*3600) 
+	settling = (tnow < settle_hrs*3600)
 endif
 if (mod(istep,nt_hour) == 0) then
 	write(logmsg,'(a,i6,a,i6,a,f8.1)') 'simulate_step: ',istep, '   Ncells: ',Ncells, '  hour: ',tnow/3600
@@ -667,8 +675,11 @@ if (.not.ok) then
 endif
 
 !return
-
+call FEsolve
 !call update_all_nbrlists
+
+
+
 
 t_fmover = 0
 nit = 0
@@ -775,10 +786,12 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine setup(ncpu,infile,outfile,ok)
 integer :: ncpu
+!character*(*) :: infile, outfile, filename
 character*(*) :: infile, outfile
 logical :: ok
 character*(64) :: msg
 integer :: error
+
 
 ok = .true.
 initialized = .false.
@@ -809,6 +822,7 @@ if (.not.ok) return
 call logger("did read_cell_params")
 
 call setup_force_parameters
+call logger("did setup_force_parameters")
 
 call array_initialisation(ok)
 if (.not.ok) return
@@ -818,6 +832,9 @@ if (calibrate_motility) then
 	call motility_calibration
 	stop
 endif
+
+call FEsetup
+
 
 call PlaceCells(ok)
 if (ok) then
@@ -846,7 +863,7 @@ if (save_input) then
     call save_parameters
     call write_header
 endif
-call chemokine_setup
+!call chemokine_setup
 firstSummary = .true.
 initialized = .true.
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells
@@ -1013,7 +1030,6 @@ if (use_tcp) then
 		return
 	endif
 endif
-write(*,*) 'ncpu: ',ncpu
 call setup(ncpu,infile,outfile,ok)
 if (ok) then
 	clear_to_send = .true.
@@ -1028,6 +1044,203 @@ endif
 return
 
 end subroutine
+!------------------------------------------------------
+subroutine FEsetup
 
+integer :: i, j, k, m, e, count1,row_size,sample_size,kcell
+integer :: count_empty, ND, Nvert,II(6), signum(6)
+integer, parameter :: out_unit=20
+real (REAL_KIND), allocatable :: vertices(:,:)
+integer, allocatable :: InternalFaces(:,:), INLET(:,:)
+integer, allocatable :: OUTLET(:,:), WALLs(:,:)
+integer, allocatable :: ELEMENT(:,:), ELEMENT2(:,:)
+integer, allocatable :: n2f(:,:), e2f(:,:),f2e(:,:)
+real (REAL_KIND), allocatable :: NODES(:,:)
+integer, allocatable :: All_Surfaces(:,:)
+
+character * ( 255 ) :: n2f_filename, e2f_filename, f2e_filename
+character * ( 255 ) :: CylinCube_filename, Centroid_filename
+character * ( 255 ) :: fileplace
+
+integer, allocatable :: element2face(:,:)
+integer, allocatable :: face2element(:,:)
+integer, allocatable :: nodes2face(:,:)
+!integer, allocatable :: CylinCub_list(:,:)
+integer, allocatable :: el(:,:)
+!real (REAL_KIND), allocatable :: Centroids(:,:)
+real(REAL_KIND), allocatable :: BB(:)
+real(REAL_KIND), allocatable :: CC(:)
+integer, allocatable :: IB(:), JB(:)
+integer, allocatable :: IC(:), JC(:)
+!real (REAL_KIND), allocatable :: B_Matrix(:,:)
+
+integer :: nel,nel_z !number of elements
+
+logical :: answer1, answer2
+real (REAL_KIND) :: vertix_vec(8)
+real (REAL_KIND), allocatable :: e_Z(:)
+
+!---------------------------------
+! We generate mesh nodes here
+! and set boundary conditions
+!---------------------------------
+!************** here we read in mesh properties form .msh file and .k files ************
+	call readmshfile(vertices,InternalFaces,INLET,OUTLET,WALLs)
+	call readKfile(NODES,ELEMENT)
+	nel = size(ELEMENT,1)
+
+	allocate(ELEMENT2(size(ELEMENT,1),8))
+	do e=1,size(ELEMENT,1)
+		if (e<=1800 .OR. e>2700) then
+			ELEMENT2(e,1)=ELEMENT(e,1)
+			ELEMENT2(e,2)=ELEMENT(e,5)
+			ELEMENT2(e,3)=ELEMENT(e,6)
+			ELEMENT2(e,4)=ELEMENT(e,2)
+			ELEMENT2(e,5)=ELEMENT(e,4)
+			ELEMENT2(e,6)=ELEMENT(e,8)
+			ELEMENT2(e,7)=ELEMENT(e,7)
+			ELEMENT2(e,8)=ELEMENT(e,3)
+		else
+			ELEMENT2(e,1)=ELEMENT(e,1)
+			ELEMENT2(e,2)=ELEMENT(e,2)
+			ELEMENT2(e,3)=ELEMENT(e,3)
+			ELEMENT2(e,4)=ELEMENT(e,4)
+			ELEMENT2(e,5)=ELEMENT(e,5)
+			ELEMENT2(e,6)=ELEMENT(e,6)
+			ELEMENT2(e,7)=ELEMENT(e,7)
+			ELEMENT2(e,8)=ELEMENT(e,8)
+		endif
+	enddo
+	ELEMENT=ELEMENT2
+	!print *, "number of elements=", nel
+	row_size=size(InternalFaces,1)+size(INLET,1)+&
+					size(OUTLET,1)+size(WALLs,1)
+	allocate(All_Surfaces(row_size,6))
+	do i=1,size(InternalFaces,1)
+		All_Surfaces(i,:)= InternalFaces(i,:)
+	enddo
+	i=size(InternalFaces,1)
+	do j=1,size(INLET,1)
+		All_Surfaces(i+j,:)= INLET(j,:)
+	enddo
+	j=size(INLET,1)
+	do k=1,size(OUTLET,1)
+		All_Surfaces(i+j+k,:)= OUTLET(k,:)
+	enddo
+	k=size(OUTLET,1)
+	do m=1,size(WALLs,1)
+		All_Surfaces(i+j+k+m,:)= WALLs(m,:)
+	enddo
+	nofaces = size(All_Surfaces,1)
+
+	allocate(nodes2face(6*nel,5))
+	allocate(element2face(nel,6))
+	allocate(face2element(nofaces,6))
+	!call face(NODES,ELEMENT,All_Surfaces,,nodes2face,element2face,face2element)
+										   !this part takes a lot of time to run so we ran it
+										   !in MATLAB and saved the outputs in .txt files and
+										   !read them here to use the data later in the code:
+	n2f_filename='nodes2face.txt'
+	!print *, "nel*6", nel*6
+	j=5 !number of columns should be read from the n2f file
+	call Read_face(n2f_filename,nel*6,j,n2f)
+	nodes2face=n2f
+	!do i=1,6*nel
+	!	print *, "n2f", nodes2face(i,:)
+	!enddo
+
+	e2f_filename='element2face.txt'
+	j=6 !number of columns should be read from the n2f file
+	call Read_face(e2f_filename,nel,j,e2f)
+	element2face=e2f
+	!print *, "e2f", element2face(nel,:)
+
+	f2e_filename='face2element.txt'
+	j=6 !number of columns should be read from the n2f file
+	call Read_face(f2e_filename,nofaces,j,f2e)
+	face2element=f2e
+	CommonFaceNo=0
+	do j = 1,size(face2element,1)
+		if (face2element(j,6)/= 0) then
+			CommonFaceNo=CommonFaceNo+1
+		endif
+	enddo
+	!print *, "CommonFaceNo", CommonFaceNo
+	!print *, "f2e", face2element(1,:)
+
+
+!set boundary condition
+	!1)set up dirichlet surfaces
+	allocate(DCInlet(size(INLET,1)))
+	allocate(DCOutlet(size(OUTLET,1)))
+	!2)set up Neumann surfaces - normal flux in/out = neumann wall
+	allocate(NCWall(size(WALLs,1)))
+	allocate(NCInlet(size(INLET,1)))
+	call set_boundary_condition(nel, INLET,OUTLET,WALLs,All_Surfaces, &
+	DCInlet,DCOutlet, NCWall, NCInlet)
+	!print *, "inlet face=", DCInlet
+	!print *, "outlet face=", DCOutlet
+	!write (*,*) "wall face=", NCWall
+
+
+	CylinCube_filename='CylinCub_list.txt'
+	call Read_face(CylinCube_filename,nel,2,CylinCub_list)
+
+	Centroid_filename='Centroid.txt'
+	fileplace= ""
+	call Read_real(fileplace,Centroid_filename,nel,3,Centroids)
+	!print *, "Centroids=", Centroids(1,:)
+
+	call unique(REAL(NINT(vertices(:,3)), REAL_KIND),e_Z)
+	!print *, "e_Z=", e_Z(:)
+	nel_z=size(e_Z)-1
+	allocate(el(nel_z,INT(nel/nel_z)))
+	do k=2,nel_z+1
+		j=0
+		do e=1,size(Element,1)
+			do i=1,8
+				vertix_vec(i)=REAL(NINT(vertices(ELEMENT(e,i),3)),REAL_KIND)
+			enddo
+		answer1=isempty_find(vertix_vec,e_Z(k))
+		answer2=isempty_find(vertix_vec,e_Z(k-1))
+			if ( .not.answer1 .AND. .not.answer2 ) then
+				j=j+1
+				el(k-1,j)=e
+			endif
+		enddo
+	enddo
+	!print *, "el=", el(1,:)
+
+	!allocate(BB(6*6*nel-CommonFaceNo))
+	!allocate(CC(6*nel))
+	!allocate(IB(6*6*nel-CommonFaceNo))
+	!allocate(JB(6*6*nel-CommonFaceNo))
+	!allocate(IC(6*nel))
+	!allocate(JC(6*nel))
+	allocate(B_MATRIX(nel))
+    call READ_Bmatrix(nel)
+
+allocate(ElToFace(nel,6))
+ElToFace=element2face
+allocate(AllSurfs(row_size,6))
+AllSurfs=All_Surfaces
+NofElements=nel
+!allocate(B_MATRIX(6*6*nel-CommonFaceNo))
+!allocate(C_MATRIX(6*nel))
+!allocate(IB_MATRIX(6*6*nel-CommonFaceNo))
+!allocate(JB_MATRIX(6*6*nel-CommonFaceNo))
+!allocate(IC_MATRIX(6*nel))
+!allocate(JC_MATRIX(6*nel))
+!B_MATRIX= BB
+!write(nflog,*) B_MATRIX(1:10)
+!IB_MATRIX = IB
+!JB_MATRIX=JB
+!C_MATRIX=CC
+!IC_MATRIX=IC
+!JC_MATRIX=JC
+!allocate(Cyl_Centroids(nel,3))
+!Cyl_Centroids=Centroids
+end subroutine
+!------------------------------------------------------
 end module
 

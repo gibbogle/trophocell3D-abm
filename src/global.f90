@@ -11,7 +11,7 @@ use winsock
 implicit none
 
 ! Files
-integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nftraffic = 16, nfrun = 17, &
+integer, parameter :: nfinput=1, nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nftraffic = 16, nfrun = 17, &
 					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nffacs = 24
 
 ! General parameters
@@ -55,6 +55,14 @@ integer, parameter :: MAX_NGAPS = 1000
 integer, parameter :: MAX_CHEMO = 2
 integer, parameter :: MAX_RECEPTOR = 2
 
+!-------flow parameters:--------------------------
+real (REAL_KIND), parameter :: inletPressure = 13/(7.5)*10**(3)
+real (REAL_KIND), parameter :: outletPressure = 10/(7.5)*10**(3)!*133.322
+!real (REAL_KIND), parameter :: cell_radius=20
+!real (REAL_KIND), parameter :: Tube_radius=200
+!real (REAL_KIND), parameter :: Plug_min= 100
+!real (REAL_KIND), parameter :: Plug_max= 600
+real (REAL_KIND), parameter :: blood_viscosity= 0.003
 
 ! Data above this line almost never change
 !==============================================================================================================
@@ -98,11 +106,29 @@ logical, parameter :: log_results = .false.
 
 ! Type definitions
 
+!Node data
+type Node_type
+    integer :: ID
+    real (REAL_KIND) :: site(3)
+	!integer, allocatable :: coordinates(:,:,:) ! coordinates of all nodes (x,y,z)
+end type
+
+type element_type
+    integer :: nel, nel_x ,nel_y ,nel_z, nnp
+    real (REAL_KIND) :: x_min, x_max, y_min, y_max, z_min, z_max
+    real (REAL_KIND) :: x_width, y_width, z_width, volume
+    real (REAL_KIND), allocatable :: vol_fraction(:)
+		!real (REAL_KIND) :: x, y, z
+    integer :: nsd, nen ,ndof, neq
+end type
+
+
 type neighbour_type
 	integer :: indx
 !	logical :: incontact
 	logical*1 :: contact(2,2)
 end type
+
 
 type cell_type
     integer :: ID
@@ -130,7 +156,9 @@ type cell_type
 	integer(2) :: lastdir
 	integer :: dtotal(3)
 	integer :: nbrs
+!	integer :: wallnbrs
 	type(neighbour_type) :: nbrlist(100)
+!	type (neighbour_type) :: wallnbrlist(MAX_NLIST)
 end type
 
 type occupancy_type
@@ -183,6 +211,29 @@ real(REAL_KIND) :: Vc, Ve
 
 real(REAL_KIND) :: Raverage
 real(REAL_KIND) :: tube_radius, tube_length, plug_zmin, plug_zmax, plug_hmax
+
+!mesh data
+integer :: nofaces, NofElements
+integer :: CommonFaceNo
+integer, allocatable :: ElToFace(:,:)
+integer, allocatable :: AllSurfs(:,:)
+real (REAL_KIND), allocatable :: Centroids(:,:)!Cyl_Centroids(:,:)
+integer, allocatable :: CylinCub_list(:,:)
+
+!real(REAL_KIND), allocatable :: B_MATRIX(:)
+!real(REAL_KIND), allocatable :: C_MATRIX(:)
+!integer, allocatable :: IB_MATRIX(:), JB_MATRIX(:)
+!integer, allocatable :: IC_MATRIX(:), JC_MATRIX(:)
+type Bmatrix_cell
+    real (REAL_KIND), ALLOCATABLE :: Inside_B(:,:)
+end type
+type(Bmatrix_cell), allocatable:: B_MATRIX(:)
+
+!Boundary Condition
+integer, allocatable :: DCInlet(:)
+integer, allocatable ::DCOutlet(:)
+integer, allocatable ::NCWall(:)
+integer, allocatable ::NCInlet(:)
 
 ! Motility data
 real(REAL_KIND) :: DELTA_T       ! minutes
@@ -247,7 +298,7 @@ logical :: use_CPORT1
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: use_hysteresis = .false.
 logical :: use_permute = .true.
-logical :: use_packing = .false.
+logical :: use_packing = .true.
 logical :: use_settling = .true.
 logical :: settling
 
@@ -648,7 +699,102 @@ do kcell = 1,nlist
     xyzsum = xyzsum + cell_list(kcell)%site
 enddo
 write(nfres,'(2i6,3i12)') istep,k,xyzsum
+
 end subroutine
+!---------------------------------------------------------------------------
+subroutine ax_st ( n, nz_num, ia, ja, a, x, w )
+
+!*****************************************************************************80
+!
+!! AX_ST computes A*x for a matrix stored in sparset triplet form.
+!
+!  Discussion:
+!
+!    The matrix A is assumed to be sparse.  To save on storage, only
+!    the nonzero entries of A are stored.  For instance, the K-th nonzero
+!    entry in the matrix is stored by:
+!
+!      A(K) = value of entry,
+!      IA(K) = row of entry,
+!      JA(K) = column of entry.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    08 August 2006
+!
+!  Author:
+!
+!    Original C version by Lili Ju.
+!    FORTRAN90 version by John Burkardt.
+!
+!  Reference:
+!
+!    Richard Barrett, Michael Berry, Tony Chan, James Demmel,
+!    June Donato, Jack Dongarra, Victor Eijkhout, Roidan Pozo,
+!    Charles Romine, Henk van der Vorst,
+!    Templates for the Solution of Linear Systems:
+!    Building Blocks for Iterative Methods,
+!    SIAM, 1994.
+!    ISBN: 0898714710,
+!    LC: QA297.8.T45.
+!
+!    Tim Kelley,
+!    Iterative Methods for Linear and Nonlinear Equations,
+!    SIAM, 2004,
+!    ISBN: 0898713528,
+!    LC: QA297.8.K45.
+!
+!    Yousef Saad,
+!    Iterative Methods for Sparse Linear Systems,
+!    Second Edition,
+!    SIAM, 2003,
+!    ISBN: 0898715342,
+!    LC: QA188.S17.
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) N, the order of the system.
+!
+!    Input, integer ( kind = 4 ) NZ_NUM, the number of nonzeros.
+!
+!    Input, integer ( kind = 4 ) IA(NZ_NUM), JA(NZ_NUM), the row and column
+!    indices of the matrix values.
+!
+!    Input, real ( kind = 8 ) A(NZ_NUM), the matrix values.
+!
+!    Input, real ( kind = 8 ) X(N), the vector to be multiplied by A.
+!
+!    Output, real ( kind = 8 ) W(N), the value of A*X.
+!
+  implicit none
+
+  integer :: n
+  integer :: nz_num
+
+  real (REAL_KIND) :: a(nz_num)
+  integer :: i
+  integer :: ia(nz_num)
+  integer :: j
+  integer :: ja(nz_num)
+  integer :: k
+  real (REAL_KIND) :: w(n)
+  real (REAL_KIND) :: x(n)
+
+  w(1:n) = 0.0D+00
+
+  do k = 1, nz_num
+    i = ia(k)
+    j = ja(k)
+    w(i) = w(i) + a(k) * x(j)
+  end do
+
+  return
+end subroutine
+!------------------------------------------------
 
 
 end module
