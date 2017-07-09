@@ -285,7 +285,7 @@ logical :: firstSummary
 ! Miscellaneous data
 logical :: initialized, steadystate
 integer :: total_in, total_out
-integer :: Nsteps, nsteps_per_min, istep
+integer :: nsteps_per_min, istep
 integer :: Mnodes
 integer :: IDtest
 
@@ -304,9 +304,10 @@ logical :: settling
 
 logical :: dbug = .false.
 
+integer :: Nsteps
 !!DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !!DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
-!DEC$ ATTRIBUTES DLLEXPORT :: nsteps	!istep
+!!GCC$ ATTRIBUTES DLLEXPORT :: global
 contains
 
 !---------------------------------------------------------------------
@@ -796,6 +797,10 @@ subroutine ax_st ( n, nz_num, ia, ja, a, x, w )
 end subroutine
 !------------------------------------------------
 
+subroutine get_Nsteps(N)
+integer :: N
+N = Nsteps
+end subroutine
 
 end module
 

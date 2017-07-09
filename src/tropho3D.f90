@@ -833,7 +833,7 @@ if (calibrate_motility) then
 	stop
 endif
 
-call FEsetup
+!call FEsetup
 
 
 call PlaceCells(ok)

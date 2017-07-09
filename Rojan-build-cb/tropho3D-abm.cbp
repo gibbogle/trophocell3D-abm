@@ -17,8 +17,12 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-cpp" />
+					<Add option="-fopenmp" />
 					<Add option="-w" />
+					<Add option="-fcheck=all" />
 					<Add option="-DBUILD_DLL -ffree-form" />
+					<Add option="-DGFORTRAN" />
+					<Add option="-DOPENMP" />
 				</Compiler>
 				<ExtraCommands>
 					<Add after="myvsvars32-vs10.bat" />
@@ -26,10 +30,11 @@
 				</ExtraCommands>
 			</Target>
 			<Target title="main">
-				<Option output="tropho3D-abm" prefix_auto="1" extension_auto="1" />
+				<Option output="tropho3D_main" prefix_auto="1" extension_auto="1" />
 				<Option type="1" />
 				<Option compiler="gfortran" />
 				<Option use_console_runner="0" />
+				<Option projectLinkerOptionsRelation="1" />
 				<Compiler>
 					<Add directory="obj/Release" />
 				</Compiler>
@@ -55,6 +60,10 @@
 			<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\libblas.lib" />
 			<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\liblapack.lib" />
 		</Linker>
+		<Unit filename="../src/FEmapper.f90">
+			<Option weight="1" />
+			<Option target="DLL" />
+		</Unit>
 		<Unit filename="../src/Mesh_Generate.f90">
 			<Option weight="2" />
 			<Option target="DLL" />
@@ -89,6 +98,10 @@
 		</Unit>
 		<Unit filename="../src/nbr.f90">
 			<Option weight="2" />
+			<Option target="DLL" />
+		</Unit>
+		<Unit filename="../src/nleq1.f90">
+			<Option weight="0" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/pack.f90">

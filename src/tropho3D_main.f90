@@ -3,12 +3,11 @@
 !-----------------------------------------------------------------------------------------
 PROGRAM tropho_main
 use tropho_mod
-use global
 integer :: ncpu, res, summarydata(100)
 character*(128) :: infile,outfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour
+integer :: jstep, hour, Nsteps_tmp
 character*(128) :: b, c, progname
 
 call process_command_line(ncpu,infile,outfile)
@@ -64,11 +63,13 @@ end do
 
 !runfile = 'running.out'
 
-write(*,*) 'call execute:'
+write(*,*) 'call execute!:'
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 write(*,*) 'Nsteps: ',Nsteps
+call get_Nsteps(Nsteps_tmp)
+write(*,*) 'Nsteps_tmp: ',Nsteps_tmp
 !call get_dimensions(NX,NY,NZ,Nsteps)
-do jstep = 1,Nsteps
+do jstep = 1,Nsteps_tmp
 	call simulate_step(res)
 	if (res < 0) then
 		write(*,*) 'Error exit'
@@ -84,7 +85,7 @@ do jstep = 1,Nsteps
 !		ntot = summaryData(4)
 !		inflow = summaryData(10)
 !		exits = summaryData(11)
-!		write(*,'(5(a,i8))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits		
+!		write(*,'(5(a,i8))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits
 	endif
 enddo
 call terminate_run(0)
