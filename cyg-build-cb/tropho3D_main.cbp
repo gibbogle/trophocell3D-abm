@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="tropho3D_main.exe" />
+		<Option pch_mode="2" />
+		<Option compiler="gfortran" />
+		<Build>
+			<Target title="tropho3D_main.exe">
+				<Option output="release/tropho3D-abm" prefix_auto="1" extension_auto="1" />
+				<Option type="1" />
+				<Option compiler="gfortran" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-ffree-line-length-none" />
+					<Add option="-ffree-form" />
+					<Add option="-Wtabs" />
+				</Compiler>
+				<Linker>
+					<Add library="Release\libtropho3D-abm.a" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-cpp" />
+			<Add option="-fopenmp" />
+			<Add option="-ffree-form" />
+			<Add option="-Iobj/release" />
+			<Add option="-Wtabs" />
+		</Compiler>
+		<Unit filename="../src/tropho3D_main.f90">
+			<Option weight="0" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
