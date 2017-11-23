@@ -11,9 +11,9 @@ use global
 use behaviour
 use packer
 use nbr
-use Mesh_Generate
-use sparse
-use m_unista
+!use Mesh_Generate
+!use sparse
+!use m_unista
 use fmotion
 !use diffuse
 !use ode_diffuse_general
@@ -626,9 +626,10 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: hour, nit, nt_hour, kpar=0
+integer :: hour, nit, nt_hour, kcell, kpar=0
 real(REAL_KIND) :: tnow, dt
 logical :: ok, done, changed
+logical :: use_RK = .false.
 
 res = 0
 if (Ncells == 0) then
@@ -674,13 +675,16 @@ if (.not.ok) then
 	return
 endif
 
-!return
-call FEsolve
-!call update_all_nbrlists
+!call FEsolve
 
+call update_all_nbrlists
 
-
-
+if (use_RK) then
+	do kcell = 1,Ncells
+		perm_index(kcell) = kcell
+	enddo
+	call fmover_rk(tnow,DELTA_T,ok)
+else
 t_fmover = 0
 nit = 0
 done = .false.
@@ -705,6 +709,7 @@ do while (.not.done)
 		call make_perm_index(ok)
 	endif
 enddo
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1044,6 +1049,8 @@ endif
 return
 
 end subroutine
+
+#if 0
 !------------------------------------------------------
 subroutine FEsetup
 
@@ -1242,5 +1249,7 @@ NofElements=nel
 !Cyl_Centroids=Centroids
 end subroutine
 !------------------------------------------------------
+#endif
+
 end module
 

@@ -13,7 +13,7 @@
 				<Option compiler="gfortran" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
-				<Option projectCompilerOptionsRelation="1" />
+				<Option projectLinkerOptionsRelation="1" />
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-cpp" />
@@ -24,6 +24,13 @@
 					<Add option="-DGFORTRAN" />
 					<Add option="-DOPENMP" />
 				</Compiler>
+				<Linker>
+					<Add library="C:\Program Files (x86)\mingw-w64\mingw32\i686-w64-mingw32\lib\libws2_32.a" />
+					<Add library="D:\suitesparse-metis-for-windows\build\lib\libumfall.a" />
+					<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\libblas.lib" />
+					<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\liblapack.lib" />
+					<Add library="C:\Program Files (x86)\mingw-w64\mingw32\lib\gcc\i686-w64-mingw32\4.9.2\libgomp.a" />
+				</Linker>
 				<ExtraCommands>
 					<Add after="myvsvars32-vs10.bat" />
 					<Mode after="always" />
@@ -54,11 +61,6 @@
 		</Compiler>
 		<Linker>
 			<Add option="-s" />
-			<Add library="C:\Program Files (x86)\mingw-w64\mingw32\i686-w64-mingw32\lib\libws2_32.a" />
-			<Add library="C:\Program Files (x86)\mingw-w64\mingw32\lib\gcc\i686-w64-mingw32\4.9.2\libgomp.a" />
-			<Add library="D:\suitesparse-metis-for-windows\build\lib\libumfall.a" />
-			<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\libblas.lib" />
-			<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\liblapack.lib" />
 		</Linker>
 		<Unit filename="../src/FEmapper.f90">
 			<Option weight="1" />

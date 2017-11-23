@@ -48,8 +48,8 @@ logical, parameter :: save_input = .true.
 
 integer, parameter :: ndt_max = 30
 
-integer, parameter :: MAX_NLIST = 100000
-integer, parameter :: MAX_NGAPS = 1000
+integer, parameter :: MAX_NLIST = 2000
+integer, parameter :: MAX_NGAPS = 100
 
 ! Chemokine/receptor parameters
 integer, parameter :: MAX_CHEMO = 2
@@ -307,7 +307,7 @@ logical :: dbug = .false.
 integer :: Nsteps
 !!DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !!DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
-!!GCC$ ATTRIBUTES DLLEXPORT :: global
+!DEC$ ATTRIBUTES DLLEXPORT :: Nsteps
 contains
 
 !---------------------------------------------------------------------

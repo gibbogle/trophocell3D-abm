@@ -1,10 +1,122 @@
+double precision function spcrad(neqn,t,y)
+!DEC$ ATTRIBUTES DLLEXPORT :: spcrad
+use global
+integer :: neqn
+double precision :: t, y(neqn)
+spcrad = 10		!spcrad_value
+end function
+
+
 ! Motion based on forces
 module fmotion
 
 use global
+use rkc_90
+
 implicit none
 
+real(REAL_KIND) :: work_rkc(8+5*3*(MAX_NLIST+1))
+
 contains
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine f_rkc(neqn,t,y,dydt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, y(neqn), dydt(neqn)
+integer :: kcell, j, k
+real(REAL_KIND) :: fmax
+logical :: ok
+real(REAL_KIND), allocatable  :: force(:,:,:)
+type(cell_type), pointer :: cp
+
+allocate(force(3,neqn/3,2))
+k = 0
+do kcell = 1,Ncells
+	cp => cell_list(kcell)
+	do j = 1,3
+		k = k + 1
+		cp%centre(j,1) = y(k)
+	enddo
+enddo
+
+call forces(force,fmax,ok)
+!write(*,'(a,2e12.3)') 'f_rkc: t, fmax: ',t,fmax
+
+do kcell = 1,neqn/3
+	cp => cell_list(kcell)
+	if (cp%state == GONE_BACK .or. cp%state == GONE_THROUGH) then
+		do j = 1,3
+			k = (kcell-1)*3 + j
+			dydt(k) = 0
+		enddo
+		cycle
+	endif
+	do j = 1,3
+		k = (kcell-1)*3 + j
+		dydt(k) = force(j,kcell,1)/kdrag
+	enddo
+enddo
+deallocate(force)
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine fmover_rk(tstart,dt,ok)
+real(REAL_KIND) :: tstart, dt
+logical :: ok
+real(REAL_KIND) :: t, tend
+integer :: kcell, i, k
+real(REAL_KIND), allocatable :: xyz(:)
+type(cell_type), pointer :: cp
+! Variables for RKC
+integer :: neqn, ict, info(4), idid
+real(REAL_KIND) :: rtol, atol(1)
+type(rkc_comm) :: comm_rkc(1)
+
+write(*,'(a,2f8.1)') 'fmover_rk: t, dt: ',tstart, dt
+write(nflog,'(a,2f8.1)') 'fmover_rk: t, dt: ',tstart, dt
+allocate(xyz(3*Ncells))
+k = 0
+do kcell = 1,Ncells
+	cp => cell_list(kcell)
+	do i = 1,3
+		k = k + 1
+		xyz(k) = cp%centre(i,1)
+	enddo
+enddo
+neqn = k
+		
+ict = 1
+info(1) = 1
+info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
+info(3) = 1
+info(4) = 0
+rtol = 1d-2
+atol = rtol
+
+idid = 0
+t = tstart
+tend = t + dt
+call rkc(comm_rkc(1),neqn,f_rkc,xyz,t,tend,rtol,atol,info,work_rkc,idid,ict)
+if (idid /= 1) then
+	write(logmsg,*) 'Solver: Failed at t = ',t,' with idid = ',idid
+	call logger(logmsg)
+	ok = .false.
+	return
+endif
+
+k = 0
+do kcell = 1,Ncells
+	cp => cell_list(kcell)
+	do i = 1,3
+		k = k + 1
+		cp%centre(i,1) = xyz(k)
+	enddo
+enddo
+deallocate(xyz)
+
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! The time step size dt_move is set dynamically here.
@@ -27,6 +139,7 @@ if (ncells <= 1 .and. cell_list(1)%Iphase) then
 endif
 allocate(force(3,ncells,2))
 call forces(force,fmax,ok)
+write(*,'(a,2e12.3)') 'fmover: fmax: ',fmax
 
 if (fmax > 0) then
 	do
