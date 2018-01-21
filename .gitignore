@@ -6,6 +6,8 @@ execution
 /build-cb/par_zig_mod.mod
 /build-cb/tropho_mod.mod
 /build-cb/tropho3D-abm.cbp
+/cyg-build-cb/tropho3D-abm.cbp
+/rojan-build-cb/*.*
 /tropho3D_GUI-build/ui_SimpleView2DUI.h
 /tropho3D_GUI-build/ui_SimpleView3DUI.h
 /tropho3D_GUI-build/ui_tropho3D_GUI.h
@@ -27,6 +29,7 @@ build-cb
 **/*.depend
 **/*.layout
 **/*.user
+**/*.cbp
 
 
 
