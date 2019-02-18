@@ -6,8 +6,6 @@ execution
 /build-cb/par_zig_mod.mod
 /build-cb/tropho_mod.mod
 /build-cb/tropho3D-abm.cbp
-/cyg-build-cb/tropho3D-abm.cbp
-/rojan-build-cb/*.*
 /tropho3D_GUI-build/ui_SimpleView2DUI.h
 /tropho3D_GUI-build/ui_SimpleView3DUI.h
 /tropho3D_GUI-build/ui_tropho3D_GUI.h
@@ -15,22 +13,13 @@ execution
 /tropho3D_GUI-build/Makefile.Debug
 /tropho3D_GUI-build/Makefile.Release
 tropho3D_GUI-build
-old-build-cb/**/*
-*/*.o
-*/*.mod
-**/*.o
-**/*.mod
-**/*.a
-**/*.lib
-**/*.exe
-**/*.exp
-**/*.def
-**/*.dll
-**/*.depend
-**/*.layout
-**/*.user
-**/*.cbp
-
+rojan-build-cb
+/rojan-build-cb/**/*
+old-build-cb
+/old-build-cb/**/*
+/cyg-build-cb/obj/**/*
+/cyg-build-cb/.objs/**/*
+/cyg-build-cb/release/**/*
 
 
 
