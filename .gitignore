@@ -15,7 +15,7 @@ execution
 /tropho3D_GUI-build/Makefile.Debug
 /tropho3D_GUI-build/Makefile.Release
 tropho3D_GUI-build
-build-cb
+old-build-cb/**/*
 */*.o
 */*.mod
 **/*.o
