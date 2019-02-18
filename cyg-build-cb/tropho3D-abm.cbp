@@ -21,8 +21,8 @@
 					<Add option="-DBUILD_DLL" />
 				</Compiler>
 				<Linker>
-					<Add library="D:\cygwin\lib\gcc\i686-pc-cygwin\5.4.0\libgomp.a" />
-					<Add library="D:\testing\SuperLU_MT\pdlinsol3\Release\libpdlinsol.a" />
+					<Add option="-lgomp" />
+					<Add library=".\libpdlinsol.a" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="cyg-vsvars32-vs10.bat" />
