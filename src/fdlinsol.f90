@@ -6,6 +6,17 @@ integer, parameter :: nfHB = 10, nfrhs = 11
 
 logical :: verbose
 
+INTERFACE
+    ! The BIND(C) tells the compiler that this is an "interoperable"
+    ! procedure.  The compiler adjusts the naming conventions as
+    ! appropriate for the companion C processor.
+	subroutine slu_solve(nprocs, n, nnz, a, asub, xa, rhs) bind(C)
+    USE,INTRINSIC :: ISO_C_BINDING  ! Declares C kinds
+	integer(c_int) :: nprocs, n, nnz, asub(:), xa(:)
+	real(c_double) :: a(:), rhs(:)
+	end subroutine slu_solve
+END INTERFACE
+
 contains
 
 !-----------------------------------------------------------------------

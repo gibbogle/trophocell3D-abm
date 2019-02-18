@@ -4,17 +4,29 @@ use global
 use Mesh_Generate
 use sparsekit
 use m_unista
-use umf_solver
+!use umf_solver
+use FEmapper
 
+implicit none
+
+INTERFACE
+    ! The BIND(C) tells the compiler that this is an "interoperable"
+    ! procedure.  The compiler adjusts the naming conventions as
+    ! appropriate for the companion C processor.
+	subroutine slu_solve(nprocs, n, nnz, a, asub, xa, rhs) bind(C)
+    USE,INTRINSIC :: ISO_C_BINDING  ! Declares C kinds
+	integer(c_int) :: nprocs, n, nnz, asub(:), xa(:)
+	real(c_double) :: a(:), rhs(:)
+	end subroutine slu_solve
+END INTERFACE
 
 contains
-!------------------------------------------
-!
-!------------------------------------------
 
+!------------------------------------------
+!------------------------------------------
 subroutine READ_Bmatrix(nel)
 
-integer :: nel
+integer :: nel, j
 character * ( 255 ) :: fileplace, Bmatrix_filename
 
 fileplace= "./B_matrix/"
@@ -26,8 +38,8 @@ do j = 1,nel
 enddo
 
 end subroutine
+
 !------------------------------------------
-!
 !------------------------------------------
 subroutine sparseMatrices(nel,element2face,All_Surfaces,k,A, IA, JA)
 
@@ -40,7 +52,7 @@ integer :: IB(6*6*nel-CommonFaceNo), JB(6*6*nel-CommonFaceNo)!, ones(6)
 integer :: IC(6*nel), JC(6*nel),All_Surfaces(:,:), element2face(:,:)
 integer :: IA(8*6*nel-CommonFaceNo),JA(8*6*nel-CommonFaceNo)
 !real(REAL_KIND), allocatable :: Ak(:,:)
-integer :: ii,j, I(6), signum(6), DiagSig(6,6)
+integer :: ii, jj, j, I(6), signum(6), DiagSig(6,6)
 integer :: counter, Recount1, Ccounter, commonCount
 logical :: ok1
 character * ( 255 ) :: fileplace, Bmatrix_filename
@@ -57,7 +69,7 @@ character * ( 255 ) :: fileplace, Bmatrix_filename
 !Ak(5,:)= 1/(2.*6.) *(/0.,0.,0.,0.,2.,-1./)
 !Ak(6,:)= 1/(2.*6.) *(/0.,0.,0.,0.,-1.,2./)
 
-fileplace= "./B_matrix/"
+!fileplace= "./B_matrix/"
 
 Recount1=0
 !ones=(/1,1,1,1,1,1/)
@@ -150,7 +162,6 @@ JA(:) = [JB(:),JC(:)+nofaces*ones(size(JC(:))),IC(:)]
 end subroutine
 
 !-----------------------------------------------
-!
 !-----------------------------------------------
 function diag(matrix,rank) result(diagmatrix)
 integer :: rank,i
@@ -182,8 +193,8 @@ do ii=1,size(IB)
 enddo
 
 end function
+
 !-----------------------------------------------
-!
 !-----------------------------------------------
 function ones(Msize)
 
@@ -193,8 +204,8 @@ integer :: Msize, i, ones(Msize)
 	enddo
 !print *, "ones=", ones(:)
 end function
+
 !-----------------------------------------------
-!
 !-----------------------------------------------
 subroutine Compute_BodyForce(nel,F,x, FFaces)
 integer :: nel
@@ -222,10 +233,10 @@ do i =1,size(NCWall)
 	tmp(NCWall(i)) = 1
 enddo
 FFaces(:) = findNONzeros(nel,tmp(:))
-!print *, "FreeFaces=", FreeFaces(:)
+
 end subroutine
+
 !-----------------------------------------------
-!
 !-----------------------------------------------
 function findNONzeros(nel, TMP)
 
@@ -245,7 +256,6 @@ enddo
 end function
 
 !-------------------------------------------------
-!
 !-------------------------------------------------
 subroutine FEsolve
 integer :: unit_x,unit_y,unit_z
@@ -280,23 +290,24 @@ real (REAL_KIND), allocatable :: k_Cylinder_elem(:)
 real (REAL_KIND), allocatable :: AMatrix(:)
 integer, allocatable :: IAMatrix(:)
 integer, allocatable :: JAMatrix(:)
-integer, allocatable :: FreeFaces(:)
-!Q-P Matrix
-real (REAL_KIND), allocatable :: Q_P(:)
-!Body Force Matrix
-real (REAL_KIND), allocatable :: BodyForce(:)
 real (REAL_KIND), allocatable :: Ax(:)
 
+integer, parameter :: out_unit=20
 
+!open (unit=out_unit,file="Amatrix.txt",action="write",status="replace")
+!open (unit=out_unit,file="kconduct.txt",action="write",status="replace")
+!open (unit=out_unit,file="Cellcount.txt",action="write",status="replace")
 !-----------------------------------------
 ! Hydraulic conductivity
 !-----------------------------------------
 	call Sampling_grid(EP, EP_coordinates,EP_Elemlist)
+	!call logger('Done Sampling Grid')
 	!write(*,*) "Sampling fine grids=", EP%nel
 unit_x=5
 unit_y=5
 unit_z=5
 	call Sampling_grid_multiple(unit_x, unit_y, unit_z, EP, EPm,EPm_coordinates,EPm_Elemlist)
+
 	!write(*,*) "Sampling coarse grids=", EPm%nel
 	!print *, "Sampling coarse grids=", EPm_Elemlist(1,:)
 	!print *, "Sampling coarse grids=", EPm_coordinates(:,1)
@@ -315,9 +326,11 @@ unit_z=5
 	call unique(EPm_coordinates(:,1),uniqueEPm_x)
 	!call unique(EPm_coordinates(:,2),uniqueEPm_y) !uniqueEPm_x=uniqueEPm_y
 	call unique(EPm_coordinates(:,3),uniqueEPm_z)
+	!print *, "unique_EPm_z=", uniqueEPm_z(:)
 	!print *, "unique_EPm_x=", uniqueEPm_x(:)
 	!write(*,*) "kcell=", nlist
-	call grouping(nlist,uniqueEPm_x,uniqueEPm_z,Cell_in,Cell_online,Cell_onedge, &
+	!write(*,*) "kcell=", ncells
+	call grouping(ncells,uniqueEPm_x,uniqueEPm_z,Cell_in,Cell_online,Cell_onedge, &
 		Cell_oncorner, size_Cell_in, size_Cell_online,size_Cell_onedge,size_Cell_oncorner)
 		!print *, "Cell in =", Cell_in(1,:)
 		!print *, "Cell online =", Cell_online(1,:)
@@ -327,14 +340,22 @@ unit_z=5
 		!print *, "size Cell onedge =", size_Cell_onedge
 		!print *, "size Cell oncornet =", size_Cell_oncorner
 
+
 	call cellcount(EPm,EPm_coordinates,EPm_Elemlist,Cell_in,size_Cell_in,cellcount_inside_elem)
 	!write(*,*) "cellcount_inside_elem=", cellcount_inside_elem(:)
+	!print *, "cellcount_inside_elem =", size(cellcount_inside_elem)
 	call cellcount(EPm,EPm_coordinates,EPm_Elemlist,Cell_online,size_Cell_online,cellcount_online_elem)
 	!write(*,*) "cellcount_online_elem =", cellcount_online_elem(:)
 	call cellcount(EPm,EPm_coordinates,EPm_Elemlist,Cell_onedge,size_Cell_onedge,cellcount_onedge_elem)
 	!write(*,*) "cellcount_onedge_elem =", cellcount_onedge_elem(:)
 	call cellcount(EPm,EPm_coordinates,EPm_Elemlist,Cell_oncorner,size_Cell_oncorner,cellcount_oncorner_elem)
 	!write(*,*) "cellcount_oncorner_elem =", cellcount_oncorner_elem(:)
+
+!write(*,*) " Number of EPm elements=", EPm%nel
+!do i=1,size(cellcount_inside_elem)
+ !   write (*,*) cellcount_inside_elem(i)
+!enddo
+
 
 	k_empty=10
 	count_empty=0
@@ -368,9 +389,13 @@ do i=1,EPm%nel
         endif
      endif
 enddo
+!write(*,*) " Number of EPm elements=", EPm%nel
+!do i=1,EPm%nel
+ !       write (out_unit,*) k_conduct(i)
+!enddo
 	!write(*,*) " vol_ratio=", vol_ratio(:)
 	!print *, " k_conduct=", k_conduct(:)
-
+!call logger('Done finding k_conduct')
 ! Convert to nodal values of sampling grid
 IF (ALLOCATED (k_node_mat)) DEALLOCATE (k_node_mat)
 allocate(k_node_mat(EPm%nnp,2))
@@ -387,8 +412,27 @@ do e = 1,EPm%nel
 		else
             k_node_mat(EPm_Elemlist(e,i),1) = k_conduct(e)
         endif
+        !if (k_node_mat(EPm_Elemlist(e,i),2)>1 .AND. EPm_coordinates(EPm_Elemlist(e,i),3)<600 ) then
+        !    k_node_mat(EPm_Elemlist(e,i),1) = min(k_node_mat(EPm_Elemlist(e,i),1),k_conduct(e))
+        !elseif (k_node_mat(EPm_Elemlist(e,i),2)>1 .AND. EPm_coordinates(EPm_Elemlist(e,i),3)>=600 &
+        !    .AND. EPm_coordinates(EPm_Elemlist(e,i),3)<700) then
+        !    k_node_mat(EPm_Elemlist(e,i),1) =( (k_node_mat(EPm_Elemlist(e,i),1)* (k_node_mat(EPm_Elemlist(e,i),2)-1) + &
+		!				k_conduct(e))/k_node_mat(EPm_Elemlist(e,i),2)+ &
+		!				k_node_mat(EPm_Elemlist(e-16,i),1) )/2
+
+        !!(k_node_mat(EPm_Elemlist(e,i),1)* &
+		!!						(k_node_mat(EPm_Elemlist(e,i),2)-1) + &
+		!!				k_conduct(e))/k_node_mat(EPm_Elemlist(e,i),2)
+		!else
+         !   k_node_mat(EPm_Elemlist(e,i),1) = k_conduct(e)
+        !endif
     enddo
 enddo
+!write(*,*) " Number of EPm elements=", EPm%nnp
+!do i=1,EPm%nnp
+!        write (out_unit,*) k_node_mat(i,:)
+!enddo
+!call logger('Done finding k_node_mat')
 !print *, " k_node_mat=", k_node_mat(:,:)
 IF (ALLOCATED (k_ref)) DEALLOCATE (k_ref)
 allocate(k_ref(size(EP_coordinates,1)))
@@ -404,7 +448,12 @@ allocate(k_Cylinder_elem(NofElements))
  call FIND_K_Cylinder(k_elem,EP,EP_Elemlist,EP_coordinates,Centroids, &
 				CylinCub_list, k_Cylinder_elem)
 !write(*,*) " k_Cylinder_elem=", k_Cylinder_elem(1:20)
-
+!write(*,*) " Number of elements=", NofElements
+!do i=1,NofElements
+!        !write (out_unit,*) i
+!        write (out_unit,*) " k_Cylinder=",k_Cylinder_elem(i)
+!enddo
+!call logger('Done FIND_K_Cylinder')
 
 !------------------------------------------
 ! Stiff Matrix
@@ -419,14 +468,22 @@ IF (ALLOCATED (JAMatrix)) DEALLOCATE (JAMatrix)
 	allocate(IAMatrix((8*6*NofElements-CommonFaceNo)))
 	allocate(JAMatrix((8*6*NofElements-CommonFaceNo)))
 	call sparseMatrices(NofElements,ElToFace,AllSurfs,k_Cylinder_elem, AMatrix,IAMatrix,JAMatrix)
+    !do i=1,size(AMatrix)
+    !    write (out_unit,*) AMatrix(i)
+    !enddo
 !------------------------------------------
 ! set body force and other boundary conditions (Dirichlet)
 !-------------------------------------------
-	allocate(BodyForce(nofaces+nel))
-	allocate(Q_P(nofaces+nel))
-	allocate(FreeFaces(nofaces+nel-size(NCWall)))
-	allocate(Ax(nofaces+nel))
-	call Compute_BodyForce(nel,BodyForce,Q_P,FreeFaces)
+	IF (ALLOCATED (Ax)) DEALLOCATE (Ax)
+	allocate(Ax(nofaces+NofElements))
+	IF (ALLOCATED (BodyForce)) DEALLOCATE (BodyForce)
+	allocate(BodyForce(nofaces+NofElements))
+	IF (ALLOCATED (Q_P)) DEALLOCATE (Q_P)
+    allocate(Q_P(nofaces+NofElements))
+    IF (ALLOCATED (FreeFaces)) DEALLOCATE (FreeFaces)
+    allocate(FreeFaces(nofaces+NofElements-size(NCWall)))
+
+	call Compute_BodyForce(NofElements,BodyForce,Q_P,FreeFaces)
 	call ax_st ( size(BodyForce), size(AMatrix), IAMatrix, JAMatrix, &
 	AMatrix, Q_P, Ax ) !computes A*x, A is a sparse matrix
 	BodyForce(:) = BodyForce(:) - Ax(:)
@@ -434,7 +491,6 @@ IF (ALLOCATED (JAMatrix)) DEALLOCATE (JAMatrix)
 	!print *, "QP=", Q_P(:)
 
 count1=0
-!print *, "", size(FreeFaces), size(IAMatrix), size(JAMatrix)
 !open (unit=out_unit,file="notfound.txt",action="write",status="replace")
 !write (out_unit,*) "Free Face=", FreeFaces
 do i = 1,size(FreeFaces)
@@ -459,11 +515,13 @@ enddo
 
 	call solver(AMatrix,IAMatrix,JAMatrix,BodyForce,Q_P,&
 	FreeFaces,size(FreeFaces), count1)
+ !do i=1,nofaces+NofElements
+!	write(nflog,'(a,3f10.1)') "final flow=", Q_P(i)
+!enddo
 
-	!write(*,*) "final=", Q_P(1:20)
-
+!close (out_unit)
 end subroutine
-!--------------------------------------------------
+
 !---------------------------------------------------------------
 ! we solve to get the answers for x(Freeface) =A(Freeface,Freeface)\b(FreeFace)
 !---------------------------------------------------------------
@@ -473,20 +531,24 @@ integer :: i, j, k,p, FFace(:), sizeFFace, ncc, icc(n), jao(n), row_ind(n)
 integer :: count1, count2, n, ccc(n+1), iao(sizeFFace+1), MaxIter, col_ptr(sizeFFace+1)
 real(REAL_KIND) :: A(:), NewA(n), acc(n), ao(n), TOLER, acsc(n)
 real(REAL_KIND) :: solution(sizeFFace), residual(sizeFFace)
+real(REAL_KIND) :: out_vel1, DV_velocity, ave_outflow_veloc
 integer :: IA(:),JA(:), NewIA(n), NewJA(n)
-integer :: rowcount, columncount
+integer :: rowcount, columncount!, DV_Number(size(DCOutlet))
 integer :: isolve_mode
 real(4) :: t1, t2
 
 real(REAL_KIND) :: BForce(:), QP(:), newBForce(sizeFFace)
 real(REAL_KIND) :: newQP(sizeFFace), Ax(sizeFFace)
 
+integer, allocatable :: Ap_save(:), Ai_save(:)
+real(8), allocatable :: Ax_save(:)
+
 !integer, parameter :: out_unit=20
 
 
-
-!open (unit=out_unit,file="rearranged A.txt",action="write",status="replace")
-
+allocate(Ap_save(sizeFFace+1))
+allocate(Ai_save(n))
+allocate(Ax_save(n))
 
 count1 = 0
 rowcount=0
@@ -501,7 +563,7 @@ do i = 1, sizeFFace
 					NewA(count1) = A(j)
 					NewIA(count1) = rowcount !IA(j)
 					NewJA(count1) = k !JA(j)
-					!write (out_unit,*) " New A=",NewA(count1),NewIA(count1),NewJA(count1)
+					!write (out_unit,*) NewA(count1),NewIA(count1),NewJA(count1)
 				endif
 			enddo
 		endif
@@ -521,10 +583,17 @@ enddo
 	!print *, "row indices", iao
 	!print *, "real values", ao
 	!write (out_unit,*) " real values=",ao
+	!do i=1,size(NEWA(:))
+    !    write (out_unit,*) ao(i)
+    !enddo
 	!close (out_unit)
 
     call csrcsc (sizeFFace, 1, 1, ao, jao, iao, acsc, row_ind, col_ptr )
-
+!call logger('Done csrcsc')
+!write (*,*) "nz",size(NEWA(:))
+!do i=1,size(NEWA(:))
+ !   write (out_unit,*) acsc(i)
+!enddo
 !----------------------------------------------------------------
 ! convert from 1-based to 0-based
 !----------------------------------------------------------------
@@ -534,15 +603,37 @@ enddo
 do p = 1, size(NEWA(:))
 	row_ind(p) = row_ind(p) - 1
 enddo
+!========== start umf solver=============================
+!isolve_mode = SOLVE_NO_ITERATION
+!call cpu_time(t1)
+!call solve_umf(isolve_mode, sizeFFace, col_ptr, row_ind, acsc, newBForce, solution)
+!call cpu_time(t2)
+!write(*,'(a,f8.1)') 'Solve time (sec): ',t2-t1
 
-isolve_mode = SOLVE_NO_ITERATION
+
+!! print the residual.
+!call resid (sizeFFace, col_ptr, row_ind, acsc,  solution, newBForce, residual)
+!========== end umf solver=============================
+
+
+!========== start slu solver=============================
+solution= newBForce
+Ap_save = col_ptr
+Ai_save = row_ind
+Ax_save = acsc
 call cpu_time(t1)
-call solve_umf(isolve_mode, sizeFFace, col_ptr, row_ind, acsc, newBForce, solution)
+!!write(*,*) 'call slu_solve: n,nz: ',n,nz
+!!write(*,*)
+call slu_solve(4, sizeFFace, size(NEWA(:)), acsc, row_ind, col_ptr, solution);
+!!UMF call solve(isolve_mode, n, Ap, Ai, Ax, b, x)
 call cpu_time(t2)
-write(*,'(a,f8.1)') 'Solve time (sec): ',t2-t1
+write(*,*)
+write(*,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
 
-! print the residual.
-call resid (sizeFFace, col_ptr, row_ind, acsc,  solution, newBForce, residual)
+!! print the residual.
+write(*,*) 'After solve, residual:'
+call resid (sizeFFace, Ap_save, Ai_save, Ax_save, solution, newBForce, residual)
+!========== end slu solver=============================
 
    newQP = solution
    !******check error of x compare to b********
@@ -555,12 +646,24 @@ call resid (sizeFFace, col_ptr, row_ind, acsc,  solution, newBForce, residual)
 		QP(FFace(i))= newQP(i)
 	enddo
 	!print *, "final=", QP
-
+	out_vel1=0
+	write(nflog2,'(i6,$)') istep
+    do i = 1,size(DCInlet)
+        out_vel1 = QP(DCInlet(i)) + out_vel1
+        !DV_Number(i) = DCOutlet(i)  !first column stores face number
+        DV_velocity = QP(DCInlet(i)) !2nd column stores velocity on the face
+        write(nflog2,'(i20,$)') DCInlet(i)
+        write(nflog2,'(1f20.3,$)') DV_velocity
+    enddo
+    write(nflog2,*)
+    ave_outflow_veloc = out_vel1/i
+    write(nflog2,'(a,1f15.3)') 'Average out flow: ', ave_outflow_veloc
 
 !close (out_unit)
 end subroutine solver
-!-------------------------------------------------------
-!*****************************************************************************
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
  subroutine rearrange_cr ( n, ia, ja, a )
 !!! REARRANGE_CR sorts a sparse compressed row matrix.
     !    This routine guarantees that the entries in the CR matrix
@@ -616,5 +719,443 @@ end subroutine solver
 
     return
  end subroutine rearrange_cr
- !-----------------------------------------------
+ 
+!-----------------------------------------------
+!-----------------------------------------------
+subroutine GetVel
+real (REAL_KIND) :: elem_vertices(8,3), fsum(3)
+integer, allocatable :: cell_elem(:)
+real (REAL_KIND), allocatable :: cell_in_reference(:,:)
+real (REAL_KIND) :: coordPhy(3), coordref(3)
+integer :: elem_nodes(8), i, j, k, e, II(6),signum(6), ND, Nvert
+real (REAL_KIND) :: xhat, yhat, zhat, Uhat(6)
+real (REAL_KIND) :: uhat_x, uhat_y, uhat_z, x_corners(8,3)
+real (REAL_KIND) :: D_matrix(3,3),JJ,u_total(3)!, velocity_vec(3,1)
+!real (REAL_KIND), allocatable :: u_x(:), u_y(:), u_z(:)
+
+! transfer cell position from physical to the reference elements:
+	!print *, "nlist=",nlist
+	IF (ALLOCATED (cell_elem)) DEALLOCATE (cell_elem)
+	allocate(cell_elem(ncells))
+	call find_cell_in_CylElem(e_Z,NofElements_z,nlist,Cylinder_ELEMENT,Cylinder_vertices,layered_el,cell_elem)
+	!do i=1,100!nlist
+!		print *, "cell in cyl elem=", cell_elem(i)
+		!write(*,'(a,i6)') "cell in cyl elem=", cell_elem(i)
+	!enddo
+	!call logger('Done finding cell_elem')
+	ND = 3
+	Nvert = 8
+	IF (ALLOCATED (cell_in_reference)) DEALLOCATE (cell_in_reference)
+	allocate(cell_in_reference(ncells,3))
+	do i=1,ncells
+        !write(nflog,'(i6,$)') cell_elem(i)
+		!print *, "element=",Element(cell_elem(i),:)
+		if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
+		elem_nodes(1)=Cylinder_ELEMENT(cell_elem(i),1)
+		elem_nodes(2)=Cylinder_ELEMENT(cell_elem(i),2)
+		elem_nodes(3)=Cylinder_ELEMENT(cell_elem(i),3)
+		elem_nodes(4)=Cylinder_ELEMENT(cell_elem(i),4)
+		elem_nodes(5)=Cylinder_ELEMENT(cell_elem(i),5)
+		elem_nodes(6)=Cylinder_ELEMENT(cell_elem(i),6)
+		elem_nodes(7)=Cylinder_ELEMENT(cell_elem(i),7)
+		elem_nodes(8)=Cylinder_ELEMENT(cell_elem(i),8)
+		do j=1,8
+			elem_vertices(j,1:3)=Cylinder_vertices(elem_nodes(j),1:3)
+			!print *, "elem_nodes=",elem_nodes(j)
+			!print *, "element vertices=", elem_vertices(j,:)
+		enddo
+
+		coordPhy(1:3)=cell_list(i)%centre(1:3,1)
+		call mapper(ND,Nvert,elem_vertices,coordPhy,coordref)
+		cell_in_reference(i,:)=coordref(1:3)
+	enddo
+	
+	!write(nflog,*)
+	!call logger('Done transfer to reference element')
+!--------------------------------------------------
+!it is to test if the cell position found in the reference element is correct or not
+	!do i=1,10
+    !    write(*,'(a,3e12.3)') "cell in original elem=",cell_list(1)%centre(1:3,1)
+	!	write(*,'(a,3e12.3)') "cell in reference elem=", cell_in_reference(1,:)
+	!enddo
+!do j=1,ncells
+!	fsum=0
+!	if (cell_list(j)%state == GONE_BACK .or. cell_list(j)%state == GONE_THROUGH) cycle
+ !       elem_nodes(1)=Cylinder_ELEMENT(cell_elem(j),1)
+!		elem_nodes(2)=Cylinder_ELEMENT(cell_elem(j),2)
+!		elem_nodes(3)=Cylinder_ELEMENT(cell_elem(j),3)
+!		elem_nodes(4)=Cylinder_ELEMENT(cell_elem(j),4)
+!		elem_nodes(5)=Cylinder_ELEMENT(cell_elem(j),5)
+!		elem_nodes(6)=Cylinder_ELEMENT(cell_elem(j),6)
+!		elem_nodes(7)=Cylinder_ELEMENT(cell_elem(j),7)
+!		elem_nodes(8)=Cylinder_ELEMENT(cell_elem(j),8)
+!	do i = 1,Nvert
+!        fsum(1:3) = fsum(1:3) + Cylinder_vertices(elem_nodes(i),1:3)*fshape(Nvert,i,cell_in_reference(j,:))
+!    enddo
+!    write(*,'(a,3e12.3)') 'Error: ',fsum(1:ND) - cell_list(j)%centre(1:3,1)
+! enddo
+!----------------------------------------------------------------------------
+!test versus Matlab
+
+!allocate(u_x(NofElements))
+!allocate(u_y(NofElements))
+!allocate(u_z(NofElements))
+
+!do e=1, NofElements
+!    xhat=0
+!    yhat=0
+!    zhat=0
+!    II(:) = ElToFace(e,:)
+!    signum=(/1,1,1,1,1,1/)
+!    do k=1,6
+!		if (e==AllSurfs(II(k),6)) then
+!			signum(k)=-1 ! -1 if edge is on T-
+!		endif
+!	enddo
+
+	!write(nflog,'(a,6i6)' ) 'signum ',signum(:)
+!	do i=1,6
+!        Uhat(i) = Q_P(ElToFace(e,i))*signum(i)
+!    enddo
+!    uhat_x=(Uhat(1)-Uhat(2))*1/8+(Uhat(1)+Uhat(2))*xhat/8
+!    uhat_y=(Uhat(6)-Uhat(5))*1/8+ (Uhat(5)+Uhat(6))*zhat/8
+!    uhat_z=(Uhat(4)-Uhat(3))*1/8+ (Uhat(3)+Uhat(4))*yhat/8
+    !write(nflog,'(a,i6)' ) 'x_corner',e
+!    do j=1,8
+!        x_corners(j,:)=(/Cylinder_vertices((Cylinder_ELEMENT(e,j)),1),&
+!        Cylinder_vertices((Cylinder_ELEMENT(e,j)),2) , Cylinder_vertices((Cylinder_ELEMENT(e,j)),3)/)
+        !write(nflog,'(3f10.2)' ) x_corners(j,:)
+!    enddo
+!    D_matrix=0.0D0
+!    D_matrix(1,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+!			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+!			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+!			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+!			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+!			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+!			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+!			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,1)
+!	D_matrix(1,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+!            (1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+!			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+!			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+!			(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+!			(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+!			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+!			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,1)
+!	D_matrix(1,3)=(1-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,1)+ &
+!			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,1)+ &
+!			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,1)+ &
+!			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,1)+ &
+!			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,1)+ &
+!			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,1)+ &
+!			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,1)+ &
+!			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,1)
+!	D_matrix(2,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,2)+&
+!			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+!			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+!			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+!			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,2)+ &
+!			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,2)+ &
+!			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+!			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,2)
+!	D_matrix(2,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,2)+ &
+!			(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+!			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+!			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+!			(1.-xhat)*(-1.)*(1+zhat)/(8.)*x_corners(5,2)+ &
+!			(1.+xhat)*(-1.)*(1+zhat)/(8.)*x_corners(6,2)+ &
+!			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+!			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,2)
+!	D_matrix(2,3)=(1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,2)+ &
+!			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,2)+ &
+!			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,2)+ &
+!			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,2)+ &
+!			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,2)+ &
+!			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,2)+ &
+!			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,2)+ &
+!			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,2)
+!	D_matrix(3,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+!			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+!			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+!			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+!			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+!			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+!			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+!			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,3)
+!	D_matrix(3,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+!			(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+!			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+!			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+!			(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+!			(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+!			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+!			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,3)
+!	D_matrix(3,3)=(1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,3)+ &
+!			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,3)+ &
+!			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,3)+ &
+!			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,3)+ &
+!			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,3)+ &
+!			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,3)+ &
+!			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,3)+ &
+!			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,3)
+
+    !do i=1,3
+        !write(nflog,'(3f10.3)' ) D_matrix(2,1),D_matrix(2,2),D_matrix(2,3)
+    !enddo
+
+
+	!velocity_vec=RESHAPE([uhat_x, uhat_y, uhat_z],(/3,1/))
+	!write(nflog,'(a,f10.2)' ) 'determinant', JJ
+!	write(nflog,'(a,3f10.1)' ) 'velocity ', uhat_x, uhat_y, uhat_z
+	!write(nflog,'(a,3f15.2)' ) 'matmul', matmul(D_matrix(1,:), velocity_vec), matmul(D_matrix(2,:), velocity_vec) &
+	!, matmul(D_matrix(3,:), velocity_vec)
+!	write(nflog,'(3f10.3)' ) D_matrix(2,1),D_matrix(2,2),D_matrix(2,3)
+!	write(nflog,'(a,3f15.2)' ) 'mine ', D_matrix(2,1),uhat_x,D_matrix(2,1)*uhat_x
+!	write(nflog,'(a,3f15.2)' ) 'mine ', D_matrix(2,2),uhat_y,D_matrix(2,2)*uhat_y
+!	write(nflog,'(a,3f15.2)' ) 'mine ', D_matrix(2,3),uhat_z,D_matrix(2,3)*uhat_z
+
+!	u_total= matmul(D_matrix, [uhat_x, uhat_y, uhat_z])
+!	JJ=FindDet(D_matrix,3)
+!	u_total=u_total*1/JJ
+
+!	u_x(e)=u_total(1)
+!	u_y(e)=u_total(2)
+!	u_z(e)=u_total(3)
+    !write(*,*) "u_cell_z=", u_z(e)
+     !write(nflog,'(a,3f10.1)' ) 'element velocity ', u_x(e),u_y(e),u_z(e)
+     !write(nflog,'(a,6i6)' ) 'element to face ',ElToFace(e,:)
+
+!enddo
+!write(nflog,*)
+
+
+IF (ALLOCATED (u_cell_x)) DEALLOCATE (u_cell_x)
+IF (ALLOCATED (u_cell_y)) DEALLOCATE (u_cell_y)
+IF (ALLOCATED (u_cell_z)) DEALLOCATE (u_cell_z)
+allocate(u_cell_x(ncells))
+allocate(u_cell_y(ncells))
+allocate(u_cell_z(ncells))
+
+do i=1, ncells
+    if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
+    xhat=cell_in_reference(i,1)
+    yhat=cell_in_reference(i,2)
+    zhat=cell_in_reference(i,3)
+    e= cell_elem(i)
+    II(:) = ElToFace(e,:)
+    signum=(/1,1,1,1,1,1/)
+    do k=1,6
+		if (e==AllSurfs(II(k),6)) then
+			signum(k)=-1 ! -1 if edge is on T-
+		endif
+	enddo
+    do j=1,6
+        Uhat(j) = Q_P(ElToFace(e,j))*signum(j)
+    enddo
+    uhat_x=(Uhat(1)-Uhat(2))*1/8+(Uhat(1)+Uhat(2))*xhat/8
+    uhat_y=(Uhat(6)-Uhat(5))*1/8+ (Uhat(5)+Uhat(6))*zhat/8
+    uhat_z=(Uhat(4)-Uhat(3))*1/8+ (Uhat(3)+Uhat(4))*yhat/8
+    do j=1,8
+        x_corners(j,:)=(/Cylinder_vertices((Cylinder_ELEMENT(e,j)),1),&
+        Cylinder_vertices((Cylinder_ELEMENT(e,j)),2) , Cylinder_vertices((Cylinder_ELEMENT(e,j)),3)/)
+    enddo
+    D_matrix(1,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,1)
+	D_matrix(1,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+            (1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+			(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+			(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,1)
+	D_matrix(1,3)=(1-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,1)+ &
+			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,1)+ &
+			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,1)+ &
+			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,1)+ &
+			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,1)+ &
+			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,1)+ &
+			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,1)+ &
+			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,1)
+	D_matrix(2,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,2)+&
+			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,2)+ &
+			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,2)+ &
+			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,2)
+	D_matrix(2,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,2)+ &
+			(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+			(1.-xhat)*(-1.)*(1+zhat)/(8.)*x_corners(5,2)+ &
+			(1.+xhat)*(-1.)*(1+zhat)/(8.)*x_corners(6,2)+ &
+			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,2)
+	D_matrix(2,3)=(1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,2)+ &
+			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,2)+ &
+			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,2)+ &
+			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,2)+ &
+			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,2)+ &
+			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,2)+ &
+			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,2)+ &
+			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,2)
+	D_matrix(3,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+			(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+			(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+			(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+			(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+			(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+			(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,3)
+	D_matrix(3,2)=(1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+			(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+			(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+			(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+			(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+			(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+			(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+			(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,3)
+	D_matrix(3,3)=(1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,3)+ &
+			(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,3)+ &
+			(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,3)+ &
+			(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,3)+ &
+			(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,3)+ &
+			(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,3)+ &
+			(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,3)+ &
+			(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,3)
+
+
+	u_total=matmul(D_matrix, [uhat_x, uhat_y, uhat_z])
+	JJ=FindDet(D_matrix,3)
+	u_total=(1/JJ)*u_total
+
+	u_cell_x(i)=u_total(1)
+	u_cell_y(i)=u_total(2)
+	u_cell_z(i)=u_total(3)
+    !write(*,*) "u_cell_z=", u_cell_z(i)
+	!F_shear(i,1)=0.0002*u_cell_x(i)-0.0002
+	!F_shear(i,2)=0.0002*u_cell_y(i)-0.0002
+	!F_shear(i,3)=0.0002*u_cell_z(i)-0.0002
+	!write(*,*) "shear force on cell=", F_shear(i,:)
+
+	!if ( abs(u_cell_y(i))> abs(u_cell_z(i)) ) then
+     !   write(nflog,'(a,3f6.1)' ) 'position ', xhat,yhat,zhat
+     !   write(nflog,'(a,3f10.1)' ) 'uhat_x,uhat_y,uhat_z ', uhat_x,uhat_y,uhat_z
+      !  write(nflog,'(a,i6)' ) 'element number ', e
+        !write(*,'(a,3f10.1)' ) 'cell velocity ', u_cell_x(i),u_cell_y(i),u_cell_z(i)
+    !else
+    !    write(nflog,'(a,i6)' ) 'element number ', e
+    !endif
+
+enddo
+
+end subroutine
+
+!-------------------------------------------------------------------------
+!Function to find the determinant of a square matrix
+!Author : Louisda16th a.k.a Ashwith J. Rego
+!Description: The subroutine is based on two key points:
+!1] A determinant is unaltered when row operations are performed: Hence, using this principle,
+!row operations (column operations would work as well) are used
+!to convert the matrix into upper traingular form
+!2]The determinant of a triangular matrix is obtained by finding the product of the diagonal elements
+!-------------------------------------------------------------------------
+
+REAL(REAL_KIND) FUNCTION FindDet(matrix, n)
+    IMPLICIT NONE
+    REAL (REAL_KIND), DIMENSION(n,n) :: matrix
+    INTEGER, INTENT(IN) :: n
+    REAL (REAL_KIND) :: m, temp
+    INTEGER :: i, j, k, l
+    LOGICAL :: DetExists = .TRUE.
+    l = 1
+    !Convert to upper triangular form
+    DO k = 1, n-1
+        IF (matrix(k,k) == 0) THEN
+            DetExists = .FALSE.
+            DO i = k+1, n
+                IF (matrix(i,k) /= 0) THEN
+                    DO j = 1, n
+                        temp = matrix(i,j)
+                        matrix(i,j)= matrix(k,j)
+                        matrix(k,j) = temp
+                    END DO
+                    DetExists = .TRUE.
+                    l=-l
+                    EXIT
+                ENDIF
+            END DO
+            IF (DetExists .EQV. .FALSE.) THEN
+                FindDet = 0
+                return
+            END IF
+        ENDIF
+        DO j = k+1, n
+            m = matrix(j,k)/matrix(k,k)
+            DO i = k+1, n
+                matrix(j,i) = matrix(j,i) - m*matrix(k,i)
+            END DO
+        END DO
+    END DO
+
+    !Calculate determinant by finding product of diagonal elements
+   FindDet = l
+    DO i = 1, n
+        FindDet = FindDet * matrix(i,i)
+    END DO
+
+END FUNCTION FindDet
+
+!This function is written only to find the determinant of a 3*3 matrix.
+!The commented function (above) does it for a general square matrices but it transfomrs
+! the matrix into an upper triangle matrix
+!REAL FUNCTION FindDet(matrix, n)
+!IMPLICIT NONE
+!    REAL (REAL_KIND), DIMENSION(n,n) :: matrix
+!    INTEGER, INTENT(IN) :: n
+
+!    if (n .ne. 3) then
+!        Write(*,'(a)') 'This function only computes determinant for  a 3by3 square matrix'
+!    else
+!      FindDet =  matrix(1,1)*(matrix(2,2)*matrix(3,3) - matrix(3,2)*matrix(2,3)) &
+!       + matrix(1,2)*(matrix(3,1)*matrix(2,3) - matrix(2,1)*matrix(3,3))  &
+!       + matrix(1,3)*(matrix(2,1)*matrix(3,2) - matrix(3,1)*matrix(2,2))
+ !   endif
+!end function
+
+!=======================================================================
+!== resid ==============================================================
+! Compute the residual, r = Ax-b, its max-norm, and print the max-norm
+! Note that A is zero-based.
+!=======================================================================
+subroutine resid (n, Ap, Ai, Ax, x, b, r)
+integer :: n, Ap(:), Ai(:), j, i, p
+double precision :: Ax(:), x(:), b(:), r(:), rmax, aij
+
+r(1:n) = -b(1:n)
+
+do j = 1,n
+	do p = Ap(j) + 1, Ap(j+1)
+		i = Ai(p) + 1
+		aij = Ax(p)
+		r(i) = r(i) + aij * x(j)
+	enddo
+enddo
+rmax = 0
+do i = 1, n
+	rmax = max(rmax, r(i))
+enddo
+
+write(*,*) 'norm (A*x-b): ', rmax
+end subroutine
+
 end module

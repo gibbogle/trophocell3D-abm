@@ -1,8 +1,112 @@
 module sparsekit
 
+use global
+
 implicit none
 
 contains
+
+subroutine coocsr ( nrow, nnz, a, ir, jc, ao, jao, iao )
+
+!*****************************************************************************80
+!
+!! COOCSR converts COO to CSR.
+!
+!  Discussion:
+!
+!    This routine converts a matrix that is stored in COO coordinate format
+!    a, ir, jc into a CSR row general sparse ao, jao, iao format.
+!
+!  Modified:
+!
+!    07 January 2004
+!
+!  Author:
+!
+!    Youcef Saad
+!
+!  Parameters:
+!
+!    Input, integer :: NROW, the row dimension of the matrix.
+!
+!    Input, integer :: NNZ, the number of nonzero elements.
+!
+! a,
+! ir,
+! jc    = matrix in coordinate format. a(k), ir(k), jc(k) store the nnz
+!         nonzero elements of the matrix with a(k) = actual real value of
+!         the elements, ir(k) = its row number and jc(k) = its column
+!        number. The order of the elements is arbitrary.
+!
+! on return:
+!
+! ir       is destroyed
+!
+!    Output, real AO(*), JAO(*), IAO(NROW+1), the matrix in CSR
+!    Compressed Sparse Row format.
+!
+  implicit none
+
+  integer :: nrow
+
+  real (REAL_KIND) :: a(:)
+  real (REAL_KIND) :: ao(nnz)
+  integer :: i
+  integer :: iad
+  integer :: iao(nrow+1)
+  integer :: ir(:)
+  integer :: j
+  integer, intent(out) :: jao(nnz)
+  integer :: jc(:)
+  integer :: k
+  integer :: k0
+  integer :: nnz
+  real (REAL_KIND) :: x
+
+  iao(1:nrow+1) = 0
+!
+!  Determine the row lengths.
+!
+  do k = 1, nnz
+    iao(ir(k)) = iao(ir(k)) + 1
+	!print *, "row value", ir(k)
+	!print *, "", iao(ir(k))
+  end do
+  !print *, "", iao(:)
+!
+!  The starting position of each row.
+!
+  k = 1
+  do j = 1, nrow+1
+     k0 = iao(j)
+     iao(j) = k
+     k = k + k0
+  end do
+!
+!  Go through the structure once more.  Fill in output matrix.
+!
+  do k = 1, nnz
+     i = ir(k)
+     j = jc(k)
+     x = a(k)
+     iad = iao(i)
+     ao(iad) = x
+     jao(iad) = j
+	 !print *, "column indices", jao(iad)
+     iao(i) = iad + 1
+  end do
+
+
+!  Shift back IAO.
+!
+  do j = nrow, 1, -1
+    iao(j+1) = iao(j)
+  end do
+  iao(1) = 1
+
+  return
+end subroutine
+!---------------------------------------------------------
 
 subroutine amask ( nrow, ncol, a, ja, ia, jmask, imask, c, jc, ic, iw, &
   nzmax, ierr )
@@ -3711,102 +3815,7 @@ subroutine coocsr_inplace ( n, nnz, job, a, ja, ia, iwk )
   return
 end subroutine
 
-subroutine coocsr ( nrow, nnz, a, ir, jc, ao, jao, iao )
-
-!*****************************************************************************80
-!
-!! COOCSR converts COO to CSR.
-!
-!  Discussion:
-!
-!    This routine converts a matrix that is stored in COO coordinate format
-!    a, ir, jc into a CSR row general sparse ao, jao, iao format.
-!
-!  Modified:
-!
-!    07 January 2004
-!
-!  Author:
-!
-!    Youcef Saad
-!
-!  Parameters:
-!
-!    Input, integer ( kind = 4 ) NROW, the row dimension of the matrix.
-!
-!    Input, integer ( kind = 4 ) NNZ, the number of nonzero elements.
-!
-! a,
-! ir,
-! jc    = matrix in coordinate format. a(k), ir(k), jc(k) store the nnz
-!         nonzero elements of the matrix with a(k) = actual real value of
-!         the elements, ir(k) = its row number and jc(k) = its column
-!        number. The order of the elements is arbitrary.
-!
-! on return:
-!
-! ir       is destroyed
-!
-!    Output, real AO(*), JAO(*), IAO(NROW+1), the matrix in CSR
-!    Compressed Sparse Row format.
-!
-  implicit none
-
-  integer ( kind = 4 ) nrow
-
-  real ( kind = 8 ) a(*)
-  real ( kind = 8 ) ao(*)
-  integer ( kind = 4 ) i
-  integer ( kind = 4 ) iad
-  integer ( kind = 4 ) iao(nrow+1)
-  integer ( kind = 4 ) ir(*)
-  integer ( kind = 4 ) j
-  integer ( kind = 4 ) jao(*)
-  integer ( kind = 4 ) jc(*)
-  integer ( kind = 4 ) k
-  integer ( kind = 4 ) k0
-  integer ( kind = 4 ) nnz
-  real ( kind = 8 ) x
-
-  iao(1:nrow+1) = 0
-!
-!  Determine the row lengths.
-!
-  do k = 1, nnz
-    iao(ir(k)) = iao(ir(k)) + 1
-  end do
-!
-!  The starting position of each row.
-!
-  k = 1
-  do j = 1, nrow+1
-     k0 = iao(j)
-     iao(j) = k
-     k = k + k0
-  end do
-!
-!  Go through the structure once more.  Fill in output matrix.
-!
-  do k = 1, nnz
-     i = ir(k)
-     j = jc(k)
-     x = a(k)
-     iad = iao(i)
-     ao(iad) = x
-     jao(iad) = j
-     iao(i) = iad + 1
-  end do
-!
-!  Shift back IAO.
-!
-  do j = nrow, 1, -1
-    iao(j+1) = iao(j)
-  end do
-  iao(1) = 1
-
-  return
-end subroutine
-
+!--------------------------------------------------------------------
 subroutine cooell ( n, nnz, a, ja, ia, ac, jac, nac, ner, ncmax, ierr )
 
 !*****************************************************************************80
@@ -13379,7 +13388,7 @@ subroutine pgmres ( n, im, rhs, sol, vv, eps, maxits, iout, &
      i = i + 1
      its = its + 1
      i1 = i + 1
-!     write(*,*) 'call lusol0 #1'
+     write(*,*) 'call lusol0 #1'
      call lusol0 ( n, vv(1,i), rhs, alu, jlu, ju )
      call ope ( n, rhs, vv(1,i1), aa, ja, ia )
 !
@@ -13472,7 +13481,7 @@ subroutine pgmres ( n, im, rhs, sol, vv, eps, maxits, iout, &
 !
 !  Call preconditioner.
 !
-!    write(*,*) 'call lusol0 #2'
+    write(*,*) 'call lusol0 #2'
     call lusol0 ( n, rhs, rhs, alu, jlu, ju )
 
     sol(1:n) = sol(1:n) + rhs(1:n)

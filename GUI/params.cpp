@@ -5,7 +5,7 @@ Params::Params()
 {
 	PARAM_SET params[] = {
 
-{"DELTA_T", 10.0, 0, 0,
+{"DELTA_T", 5.0, 0, 0,
 "Time step",
 "Time step in minutes"},
 
@@ -44,15 +44,15 @@ Params::Params()
 "Tube length",
 "Length of the tube (um)."},
 
-{"TUBE_RADIUS", 100, 0, 0,
+{"TUBE_RADIUS", 200, 0, 0,
 "Tube radius",
 "Tube radius (um)"},
 
-{"PLUG_ZMIN", 20, 0, 0,
+{"PLUG_ZMIN", 100, 0, 0,
 "Plug minimum z",
 "Plug minimum z (um)"},
 
-{"PLUG_ZMAX", 120, 0, 0,
+{"PLUG_ZMAX", 600, 0, 0,
 "Plug maximum z",
 "Plug maximum z (um)"},
 
@@ -60,7 +60,7 @@ Params::Params()
 "Plug maximum height",
 "Plug maximum height (um)"},
 
-{"RAVERAGE", 5, 0, 0,
+{"RAVERAGE", 20, 0, 0,
 "Average cell radius",
 "Average cell radius (um)"},
 
@@ -73,24 +73,36 @@ Params::Params()
  "Sleep interval after each simulation time step (ms)"},
 
 {"CHEMO_USED_1", 1, 0, 0,
- "Chemokine used",
- "Chemokine used"},
+ "Chemokine 1 used",
+ "Chemokine 1 used (z direction)"},
 
-{"CHEMO_GRAD_AMP_1", 1.0, 0, 0,
- "Gradient amplitude",
- "Amplitude of the chemokine gradient (constant)"},
+{"CHEMO_GRAD_AMP_1", 0.00011, 0, 0,
+ "Gradient amplitude 1",
+ "Amplitude of the chemokine  1 gradient (constant)"},
 
-//{"CHEMO_USED_2", 0, 0, 0,
-// "Chemokine used",
-// "Chemokine used"},
+{"CHEMO_USED_2", 1, 0, 0,
+ "Chemokine 2 used",
+ "Chemokine 2 used (radial direction)"},
 
-//{"CHEMO_GRAD_AMP_2", 0.1, 0, 0,
-// "Gradient amplitude",
-// "Amplitude of the chemokine gradient (constant)"},
+{"CHEMO_GRAD_AMP_2", 0.000049, 0, 0,
+ "Gradient amplitude 2",
+ "Amplitude of the chemokine  2gradient (constant)"},
+
+    {"CHEMO_COEF_1", 5, 0, 0,
+     "Chemokine coef1",
+     "Chemokine coef1"},
+
+    {"CHEMO_COEF_2", 1, 0, 0,
+     "Chemokine coef2",
+     "Chemokine coef2"},
 
 {"BG_FLOW_AMP", 1, 0, 0,
  "Background flow amplitude",
  "Amplitude of the background flow (constant)"},
+
+    {"INLET_PRESSURE", 65, 0, 0,
+     "Inlet pressure",
+     "Inlet pressure"},
 
     {"A_SEPARATION", 1.0, 0, 0,
     "Separation force factor",
@@ -106,15 +118,23 @@ Params::Params()
     The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
     After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
 
-    {"C_FORCE", 0.2, 0, 0,
-    "Attraction force factor 'c'",
+    {"C_FORCE_CELL", 0.065, 0, 0,
+    "Max cell-cell attraction 'c'",
     "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
     The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
     The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
     The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
     After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
 
-    {"X0_FORCE", 0.7, 0, 0,
+     {"C_FORCE_WALL", 0.55, 0, 0,
+     "Max cell-wall attraction 'c'",
+     "The cell-wall force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+     The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+     The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+     The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+     After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+    {"X0_FORCE", 0.3, 0, 0,
     "Left asymptote 'x0'",
     "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
     The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
@@ -122,7 +142,7 @@ Params::Params()
     The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
     After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
 
-    {"X1_FORCE", 1.3, 0, 0,
+    {"X1_FORCE", 1.7, 0, 0,
     "Right asymptote 'x1'",
     "The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
     The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
@@ -130,34 +150,17 @@ Params::Params()
     The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
     After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
 
-    {"KDRAG", 5, 0, 0,
+    {"KDRAG", 1, 0, 0,
      "Drag factor",
      "Displacement = dt*F/drag"},
 
-    {"FRANDOM",0.1, 0, 0,
+    {"FRANDOM",15, 0, 0,
      "Random force factor",
      "Magnitude of random additive force"},
 
-//{"KDRAG", 1, 0, 0,
-//"Drag weight: Kdrag",
-//"Weighting for drag vs. chemotaxis"},
-
-//{"KADHESION", 0.1, 0, 0,
-//"Adhesion weight: Kadh",
-//"Weighting for site attractiveness based on proximity"},
-
-//{"KSTAY", 0.2, 0, 0,
-//"Stay weight: Kstay",
-//"Weighting for extra attractiveness of current site - i.e. immobility"},
-
 {"SAVE_CELL_POSITIONS", 0, 0, 0,
  "Saved cell positions",
- "Number of cells to save positions for at each time step in the log file"},
-
-// Time-series plots
-    {"NTcells",                 1, 0,1,"",""},
-// Profile plots
-    {"CD69",                    0, 0,1,"",""}
+ "Number of cells to save positions for at each time step in the log file"}
 
 };
     nParams = sizeof(params)/sizeof(PARAM_SET);

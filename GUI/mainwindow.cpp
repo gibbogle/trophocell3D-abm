@@ -309,7 +309,7 @@ void MainWindow::setupConstituents()
 
     narraylen = 1000;
     name_array = (char *)malloc(narraylen*sizeof(char));
-    get_constituents(&Global::nvars_used, Global::GUI_to_DLL_index, &nvarlen, name_array, &narraylen);
+//    get_constituents(&Global::nvars_used, Global::GUI_to_DLL_index, &nvarlen, name_array, &narraylen);
     for (ichemo=0; ichemo<32; ichemo++)
         Global::DLL_to_GUI_index[ichemo] = -1;
     for (ivar=0; ivar<Global::nvars_used; ivar++)

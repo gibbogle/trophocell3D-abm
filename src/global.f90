@@ -12,7 +12,7 @@ implicit none
 
 ! Files
 integer, parameter :: nfinput=1, nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nftraffic = 16, nfrun = 17, &
-					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nffacs = 24
+					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nffacs = 24, nflog2=26
 
 ! General parameters
 integer, parameter :: BIG_INT = 2**30
@@ -48,20 +48,15 @@ logical, parameter :: save_input = .true.
 
 integer, parameter :: ndt_max = 30
 
-integer, parameter :: MAX_NLIST = 2000
-integer, parameter :: MAX_NGAPS = 100
+integer, parameter :: MAX_NLIST = 100000
+integer, parameter :: MAX_NGAPS = 1000
 
 ! Chemokine/receptor parameters
 integer, parameter :: MAX_CHEMO = 2
 integer, parameter :: MAX_RECEPTOR = 2
 
 !-------flow parameters:--------------------------
-real (REAL_KIND), parameter :: inletPressure = 13/(7.5)*10**(3)
 real (REAL_KIND), parameter :: outletPressure = 10/(7.5)*10**(3)!*133.322
-!real (REAL_KIND), parameter :: cell_radius=20
-!real (REAL_KIND), parameter :: Tube_radius=200
-!real (REAL_KIND), parameter :: Plug_min= 100
-!real (REAL_KIND), parameter :: Plug_max= 600
 real (REAL_KIND), parameter :: blood_viscosity= 0.003
 
 ! Data above this line almost never change
@@ -70,7 +65,6 @@ real (REAL_KIND), parameter :: blood_viscosity= 0.003
 ! Run parameters
 
 ! Parameters and switches for calibration etc.
-logical, parameter :: calibrate_motility = .false.
 logical, parameter :: motility_param_range = .false.
 logical, parameter :: motility_save_paths = .false.
 logical, parameter :: calibrate_diffusion = .false.
@@ -110,7 +104,6 @@ logical, parameter :: log_results = .false.
 type Node_type
     integer :: ID
     real (REAL_KIND) :: site(3)
-	!integer, allocatable :: coordinates(:,:,:) ! coordinates of all nodes (x,y,z)
 end type
 
 type element_type
@@ -118,7 +111,6 @@ type element_type
     real (REAL_KIND) :: x_min, x_max, y_min, y_max, z_min, z_max
     real (REAL_KIND) :: x_width, y_width, z_width, volume
     real (REAL_KIND), allocatable :: vol_fraction(:)
-		!real (REAL_KIND) :: x, y, z
     integer :: nsd, nen ,ndof, neq
 end type
 
@@ -150,21 +142,15 @@ type cell_type
 	real(REAL_KIND) :: receptor_level(MAX_RECEPTOR)
 	real(REAL_KIND) :: receptor_saturation_time(MAX_RECEPTOR)
     integer :: tag
-!    real(REAL_KIND) :: entrytime       ! time that the cell entered the paracortex (by HEV or cell division)
-!    type(cog_type),    pointer :: cptr    ! because NULL is used by winsock (from ifwinty).  NULLIFY() instead.
     integer(2) :: ctype
 	integer(2) :: lastdir
 	integer :: dtotal(3)
 	integer :: nbrs
-!	integer :: wallnbrs
 	type(neighbour_type) :: nbrlist(100)
-!	type (neighbour_type) :: wallnbrlist(MAX_NLIST)
 end type
 
 type occupancy_type
     integer :: indx(2)
-!    real(REAL_KIND) :: chemo_conc		! chemokine concentration
-!    real(REAL_KIND) :: chemo_grad(3)	! chemokine gradient vector
     integer :: isrc						! index into source list
 end type
 
@@ -196,34 +182,33 @@ integer :: seed(2)                      ! seed vector for the RNGs
 !---------------------------------------------------
 
 ! Geometry data
-!logical, parameter :: SIMULATE_2D = .false.
-!integer :: NX, NY, NZ, Ncells
-!integer :: nlength, nradius, nplug
 integer :: Ncells, nwallcells, nlist, ndt
-!integer, allocatable :: xdomain(:),xoffset(:),zdomain(:),zoffset(:)
-!integer :: blobrange(3,2)
-!real(REAL_KIND) :: Radius0
 real(REAL_KIND) :: DELTA_X, PI
 real(REAL_KIND) :: TagRadius
-!real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
-!real(REAL_KIND) :: Centre(3)
 real(REAL_KIND) :: Vc, Ve
 
 real(REAL_KIND) :: Raverage
 real(REAL_KIND) :: tube_radius, tube_length, plug_zmin, plug_zmax, plug_hmax
 
 !mesh data
-integer :: nofaces, NofElements
+integer :: nofaces, NofElements,NofElements_z
 integer :: CommonFaceNo
+integer, allocatable :: Cylinder_ELEMENT(:,:)
+real (REAL_KIND), allocatable :: Cylinder_vertices(:,:)
 integer, allocatable :: ElToFace(:,:)
 integer, allocatable :: AllSurfs(:,:)
-real (REAL_KIND), allocatable :: Centroids(:,:)!Cyl_Centroids(:,:)
+real (REAL_KIND), allocatable :: Centroids(:,:)
 integer, allocatable :: CylinCub_list(:,:)
 
-!real(REAL_KIND), allocatable :: B_MATRIX(:)
-!real(REAL_KIND), allocatable :: C_MATRIX(:)
-!integer, allocatable :: IB_MATRIX(:), JB_MATRIX(:)
-!integer, allocatable :: IC_MATRIX(:), JC_MATRIX(:)
+real (REAL_KIND), allocatable :: e_Z(:)
+integer, allocatable :: layered_el(:,:)
+
+!Q-P Matrix
+real (REAL_KIND), allocatable :: Q_P(:)
+!Body Force Matrix
+real (REAL_KIND), allocatable :: BodyForce(:)
+integer, allocatable :: FreeFaces(:)
+
 type Bmatrix_cell
     real (REAL_KIND), ALLOCATABLE :: Inside_B(:,:)
 end type
@@ -234,6 +219,10 @@ integer, allocatable :: DCInlet(:)
 integer, allocatable ::DCOutlet(:)
 integer, allocatable ::NCWall(:)
 integer, allocatable ::NCInlet(:)
+
+!cell velocity
+real (REAL_KIND), allocatable :: u_cell_x(:), u_cell_y(:), u_cell_z(:)
+real (REAL_KIND), allocatable :: F_shear(:,:)
 
 ! Motility data
 real(REAL_KIND) :: DELTA_T       ! minutes
@@ -246,7 +235,7 @@ real(REAL_KIND) :: Kadhesion, Kstay	!,Kdrag
 
 ! Force parameters
 real(REAL_KIND) :: a_separation, kdrag, frandom
-real(REAL_KIND) :: a_force, b_force, c_force, x0_force, x1_force, xcross1_force, xcross2_force
+real(REAL_KIND) :: a_force, c_force_cell, c_force_wall, x0_force, x1_force, xcross1_force, xcross2_force
 real(REAL_KIND) :: t_fmover, delta_tmove, dt_min, delta_min, delta_max
 
 ! Chemotaxis data
@@ -255,15 +244,15 @@ real(REAL_KIND), allocatable :: chemo_p(:,:,:,:)
 real(REAL_KIND) :: grad_amp(2), grad_dir(2,3)
 ! Background flow
 real(REAL_KIND) :: BG_flow_amp
+real(REAL_KIND):: inletPressure != 65/(7.5)*10**(3)
+integer :: chemo_coef1, chemo_coef2
 
 ! Cell data
-!type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable, target :: cell_list(:)
 type(source_type), allocatable :: sourcelist(:)
 integer :: nsources
 integer, allocatable :: gaplist(:)
 integer, allocatable :: perm_index(:)
-!integer, allocatable :: zrange2D(:,:,:)	! for 2D case
 integer :: lastID, n2Dsites, ngaps, ntaglimit, ntagged=0, ntagged_left
 integer :: k_nonrandom(2)
 integer :: nleft
@@ -279,13 +268,14 @@ type(dist_type) :: divide_dist(MAX_CELLTYPES)
 real(REAL_KIND) :: d_nbr_limit
 
 
-integer :: noutflow_tag, ninflow_tag
 logical :: firstSummary
+
+integer :: kcell_debug
 
 ! Miscellaneous data
 logical :: initialized, steadystate
 integer :: total_in, total_out
-integer :: nsteps_per_min, istep
+integer :: Nsteps, nsteps_per_min, istep
 integer :: Mnodes
 integer :: IDtest
 
@@ -298,16 +288,15 @@ logical :: use_CPORT1
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: use_hysteresis = .false.
 logical :: use_permute = .true.
-logical :: use_packing = .true.
+logical :: use_packing = .false.
+logical :: use_loosepack = .false.
+logical :: use_makeRing = .true.
 logical :: use_settling = .true.
 logical :: settling
 
 logical :: dbug = .false.
 
-integer :: Nsteps
-!!DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
-!!DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
-!DEC$ ATTRIBUTES DLLEXPORT :: Nsteps
+!DEC$ ATTRIBUTES DLLEXPORT :: nsteps	!istep
 contains
 
 !---------------------------------------------------------------------
@@ -317,7 +306,6 @@ integer function random_int(n1,n2,kpar)
 integer :: n1,n2,kpar
 integer :: k,R
 
-!k = irand()     ! intrinsic
 if (n1 == n2) then
     random_int = n1
 elseif (n1 > n2) then
@@ -370,19 +358,19 @@ end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-real(REAL_KIND) function norm2(r)
-real(REAL_KIND) :: r(3)
-
-norm2 = r(1)*r(1) + r(2)*r(2) + r(3)*r(3)
-end function
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
 subroutine normalize(r)
 real(REAL_KIND) :: r(3)
 
 r = r/norm(r)
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+!real(REAL_KIND) function norm2(r)
+!real(REAL_KIND) :: r(3)
+!
+!norm2 = r(1)*r(1) + r(2)*r(2) + r(3)*r(3)
+!end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -422,64 +410,6 @@ stop
 end function
 
 !-----------------------------------------------------------------------------------------
-! Generate a random value for CFSE from a distribution with mean = average
-! In the simplest case we can allow a uniform distribution about the average.
-! Multiplying factor in the range (1-a, 1+a)
-! Better to make it a Gaussian distribution:
-!  = average*(1+s*R)
-! where R = N(0,1), s = std deviation
-!-----------------------------------------------------------------------------------------
-real(REAL_KIND) function generate_CFSE(average)
-real(REAL_KIND) :: average, std, CFSE_std = 0.05
-integer :: kpar = 0
-real(REAL_KIND) :: R
-
-! Uniform distribution
-!R = par_uni(kpar)
-!generate_CFSE = (1 - a + 2*a*R)*average
-! Gaussian distribution
-R = par_rnor(kpar)	! N(0,1)
-generate_CFSE = (1 + CFSE_std*R)*average
-end function
-
-!-----------------------------------------------------------------------------------------
-! Given c (0 < c < 0.5), the fraction of the sphere volume that is cut off, compute
-! the distance of the cut from the centre, d, as x = d/R, where R = sphere radius.
-!-----------------------------------------------------------------------------------------
-subroutine get_slice(c,x)
-real(REAL_KIND) :: c,x,xp
-real(REAL_KIND), parameter :: epsilon = 0.0001
-integer :: k
-
-x = 0.5
-xp = x
-k = 0
-do
-    k = k+1
-    if (k > 100) then
-        write(logmsg,*) 'ERROR: get_slice: failed to converge'
-		call logger(logmsg)
-        stop
-    endif
-    x = 1 - 4*c/(2-(1+x)*x**3)
-    if (abs(x-xp) < epsilon) exit
-    xp = x
-enddo
-
-end subroutine
-
-
-
-!----------------------------------------------------------------------------------------
-! Convert a half life in hours to a decay rate /min
-!----------------------------------------------------------------------------------------
-real(REAL_KIND) function DecayRate(halflife)
-real(REAL_KIND) :: halflife
-
-DecayRate = log(2.0)/(halflife*60)    ! rate/min
-end function
-
-!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine logger(msg)
 character*(*) :: msg
@@ -506,53 +436,6 @@ endif
 !if (error /= 0) stop
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine init_counter(counter, nbins, binmin, binstep, logscale)
-type(counter_type) :: counter
-integer :: nbins
-real(REAL_KIND) :: binmin, binstep
-logical :: logscale
-
-counter%nbins = nbins
-counter%binmin = binmin
-counter%binstep = binstep
-counter%logscale = logscale
-if (allocated(counter%bincount)) then
-	deallocate(counter%bincount)
-endif
-allocate(counter%bincount(counter%nbins))
-counter%bincount = 0
-counter%nsamples = 0
-counter%total = 0
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! The ndist(i) count is incremented if binmin + (i-1)*binstep <= val < binmin + i*binstep
-!-----------------------------------------------------------------------------------------
-subroutine log_count(counter, sample)
-type(counter_type) :: counter
-real(REAL_KIND) :: sample
-real(REAL_KIND) :: val
-integer :: i
-
-if (counter%logscale) then
-    val = log10(sample)
-else
-	val = sample
-endif
-if (counter%nbins == 1) then
-    i = 1
-else
-    i = (val - counter%binmin)/counter%binstep + 1
-    i = max(i,1)
-    i = min(i,counter%nbins)
-endif
-counter%bincount(i) = counter%bincount(i) + 1
-counter%nsamples = counter%nsamples + 1
-counter%total = counter%total + sample
-end subroutine
-
 !--------------------------------------------------------------------------------
 ! Returns a permutation of the elements of a()
 !--------------------------------------------------------------------------------
@@ -577,9 +460,12 @@ integer :: np, kcell, kpar=0
 
 np = 0
 do kcell = 1,nlist
-	if (cell_list(kcell)%state /= ALIVE) cycle
-	np = np + 1
-	perm_index(np) = kcell
+	if (cell_list(kcell)%state == ALIVE .or. cell_list(kcell)%state == GONE_BACK .or. cell_list(kcell)%state == GONE_THROUGH) then!cycle
+        np = np + 1
+        perm_index(np) = kcell
+    else
+        cycle
+    endif
 enddo
 if (np /= ncells-nwallcells) then
 	write(logmsg,*) 'Error: make_perm_index: np /= Ncells: ',np,ncells-nwallcells,nlist
@@ -702,6 +588,8 @@ enddo
 write(nfres,'(2i6,3i12)') istep,k,xyzsum
 
 end subroutine
+
+!---------------------------------------------------------------------------
 !---------------------------------------------------------------------------
 subroutine ax_st ( n, nz_num, ia, ja, a, x, w )
 
@@ -795,11 +683,12 @@ subroutine ax_st ( n, nz_num, ia, ja, a, x, w )
 
   return
 end subroutine
-!------------------------------------------------
 
+!------------------------------------------------
+!------------------------------------------------
 subroutine get_Nsteps(N)
 integer :: N
-N = Nsteps
+N=Nsteps
 end subroutine
 
 end module

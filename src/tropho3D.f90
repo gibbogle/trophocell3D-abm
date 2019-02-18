@@ -11,17 +11,13 @@ use global
 use behaviour
 use packer
 use nbr
-!use Mesh_Generate
-!use sparse
-!use m_unista
+use Mesh_Generate
+use sparse     ! removed for use of the SuperLU_MT solver
+use m_unista
 use fmotion
-!use diffuse
-!use ode_diffuse_general
-!use ode_diffuse_secretion
-!use fields
 use winsock
 
-IMPLICIT NONE
+implicit none
 
 contains
 
@@ -104,10 +100,6 @@ nsteps_per_min = 1.0/DELTA_T
 ngaps = 0
 nlist = 0
 
-!x0 = 0
-!y0 = nradius + 1.5
-!z0 = y0
-
 if (allocated(perm_index)) deallocate(perm_index)
 
 allocate(cell_list(MAX_NLIST))
@@ -120,7 +112,6 @@ k_nonrandom = 0
 ok = .true.
 
 end subroutine
-
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -178,23 +169,10 @@ real(REAL_KIND) :: centre(3)
 
 write(nflog,'(i6,$)') istep
 do kcell = 1,n_cell_positions
-    !site = cell_list(kcell)%site
     centre = cell_list(kcell)%centre(:,1)
-    !write(nflog,'(2i5,$)') site(1:2)
     write(nflog,'(3f10.3,$)') centre(1:3)
 enddo
 write(nflog,*)
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Various logging counters are initialized here.
-!-----------------------------------------------------------------------------------------
-subroutine init_counters
-
-ninflow_tag = 0
-noutflow_tag = 0
-!call init_counter(DCtraveltime_count,200,0.0,1.0,.false.)
-
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -226,17 +204,10 @@ real(REAL_KIND) :: tnow
 logical :: ok
 
 if (.not.use_TCP) then
-!write(*,'(a)') '----------------------------------------------------------------------'
-!write(*,'(a,i6,5i8,a,2i8)') 'snapshot: ',istep
-!write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
 tnow = istep*DELTA_T
 summaryData(1:3) = [ int(tnow/60), istep, Ncells ]
-!summaryData(1:26) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-!	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
-!	navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, &
-!	noDCcontactfraction, int(noDCcontacttime), int(avetotalDCtime(1)), int(avetotalDCtime(2)) /)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -248,264 +219,6 @@ write(nfout,'(a10,$)') '      Hour'
 write(nfout,'(a10,$)') '  Timestep'
 write(nfout,'(a10,$)') '  N_Tcells'
 write(nfout,*)
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine get_nFACS(n) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_nfacs
-use, intrinsic :: iso_c_binding
-integer(c_int) :: n
-integer :: k, kcell, region
-!type (cog_type), pointer :: p
-
-!n = 0
-!do k = 1,lastcogID
-!    kcell = cognate_list(k)
-!    if (kcell == 0) cycle
-!    p => cell_list(kcell)%cptr
-!	call get_region(p,region)
-!	n = n+1
-!enddo
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine get_FACS(facs_data) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_facs
-use, intrinsic :: iso_c_binding
-real(c_double) :: facs_data(*)
-integer :: i, k, kcell, region
-!type (cog_type), pointer :: p
-
-!k = 0
-!do i = 1,lastcogID
-!    kcell = cognate_list(i)
-!    if (kcell == 0) cycle
-!    p => cell_list(kcell)%cptr
-!	call get_region(p,region)
-!	k = k+1
-!	facs_data(k) = p%CFSE
-!	k = k+1
-!	facs_data(k) = p%CD69
-!	k = k+1
-!	facs_data(k) = p%S1PR1
-!	k = k+1
-!	facs_data(k) = p%avidity
-!	k = k+1
-!	facs_data(k) = p%stimulation
-!enddo
-end subroutine
-
-!--------------------------------------------------------------------------------
-! x, y, z, gen, CFSE, CD69, S1PR1, stim, stimrate
-!--------------------------------------------------------------------------------
-subroutine write_FACS(hour)	!bind(C)	!(filename)
-!!DEC$ ATTRIBUTES DLLEXPORT :: write_facs
-integer :: hour
-character(14) :: filename
-!type (cog_type), pointer :: p
-integer :: k, kcell, region, gen, site(3)
-
-filename = 'FACS_h0000.dat'
-write(filename(7:10),'(i0.4)') hour
-open(nffacs, file=filename, status='replace')
-!do k = 1,lastcogID
-!    kcell = cognate_list(k)
-!    if (kcell == 0) cycle
-!    p => cell_list(kcell)%cptr
-!	call get_region(p,region)
-!	gen = get_generation(p)
-!	site = cell_list(kcell)%site
-!	write(nffacs,'(i3,a,$)') site(1),', '
-!	write(nffacs,'(i3,a,$)') site(2),', '
-!	write(nffacs,'(i3,a,$)') site(3),', '
-!	write(nffacs,'(i3,a,$)') gen,', '
-!	write(nffacs,'(e12.4,a,$)') p%CFSE,', '
-!	write(nffacs,'(f7.4,a,$)') p%CD69,', '
-!	write(nffacs,'(f7.4,a,$)') p%S1PR1,', '
-!	write(nffacs,*)
-!enddo
-close(nffacs)
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! nhisto is the number of histogram boxes
-! vmin(ivar),vmax(ivar) are the minimum,maximums value for variable ivar
-!
-! Compute 3 distributions: 1 = both cell types
-!                          2 = type 1
-!                          3 = type 2
-! Stack three cases in vmax() and histo_data()
-!
-! No, for tropho assume just a single cell type, but leave code in place for multiple cell types.
-! For now there are just two variables:
-!   distance from starting position
-!   angle in degrees made by total displacement vector
-!-----------------------------------------------------------------------------------------
-subroutine get_histo(nhisto, histo_data, vmin, vmax, histo_data_log, vmin_log, vmax_log) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_histo
-use, intrinsic :: iso_c_binding
-integer(c_int),value :: nhisto
-real(c_double) :: vmin(*), vmax(*), histo_data(*)
-real(c_double) :: vmin_log(*), vmax_log(*), histo_data_log(*)
-real(REAL_KIND) :: val, val_log, dx, dy
-integer :: n(3), i, ih, k, kcell, ict, ichemo, ivar, nvars, var_index(32), nct
-integer,allocatable :: cnt(:,:,:)
-real(REAL_KIND),allocatable :: dv(:,:), valmin(:,:), valmax(:,:)
-integer,allocatable :: cnt_log(:,:,:)
-real(REAL_KIND),allocatable :: dv_log(:,:), valmin_log(:,:), valmax_log(:,:)
-
-!write(nflog,*) 'get_histo'
-nct = 1	! number of cell types
-nvars = 2
-
-allocate(cnt(nct,nvars,nhisto))
-allocate(dv(nct,nvars))
-allocate(valmin(nct,nvars))
-allocate(valmax(nct,nvars))
-allocate(cnt_log(nct,nvars,nhisto))
-allocate(dv_log(nct,nvars))
-allocate(valmin_log(nct,nvars))
-allocate(valmax_log(nct,nvars))
-cnt = 0
-valmin = 0
-valmax = -1.0e10
-cnt_log = 0
-valmin_log = 1.0e10
-valmax_log = -1.0e10
-n = 0
-do kcell = 1,nlist
-!	if (cell_list(kcell)%state == DEAD) cycle
-!	ict = cell_list(kcell)%celltype
-	ict = 1
-	dx = cell_list(kcell)%dtotal(1)
-	dy = cell_list(kcell)%dtotal(2)
-!	write(nflog,*) kcell,dx,dy
-	do ivar = 1,nvars
-		if (ivar == 1) then
-			val = sqrt(dx*dx + dy*dy)
-		elseif (ivar == 2) then
-			val = atan2(dy,dx)*180/PI
-		endif
-!		valmax(ict+1,ivar) = max(valmax(ict+1,ivar),val)	! cell type 1 or 2
-		valmax(1,ivar) = max(valmax(1,ivar),val)			! both
-		if (val <= 1.0e-8) then
-			val_log = -8
-		else
-			val_log = log10(val)
-		endif
-!		valmin_log(ict+1,ivar) = min(valmin_log(ict+1,ivar),val_log)	! cell type 1 or 2
-		valmin_log(1,ivar) = min(valmin_log(1,ivar),val_log)			! both
-!		valmax_log(ict+1,ivar) = max(valmax_log(ict+1,ivar),val_log)	! cell type 1 or 2
-		valmax_log(1,ivar) = max(valmax_log(1,ivar),val_log)			! both
-	enddo
-!	n(ict+1) = n(ict+1) + 1
-	n(1) = n(1) + 1
-enddo
-
-dv = (valmax - valmin)/nhisto
-!write(nflog,*) 'dv'
-!write(nflog,'(e12.3)') dv
-dv_log = (valmax_log - valmin_log)/nhisto
-!write(nflog,*) 'dv_log'
-!write(nflog,'(e12.3)') dv_log
-do kcell = 1,nlist
-!	if (cell_list(kcell)%state == DEAD) cycle
-!	ict = cell_list(kcell)%celltype
-	ict = 1
-	dx = cell_list(kcell)%dtotal(1)
-	dy = cell_list(kcell)%dtotal(2)
-	do ivar = 1,nvars
-		if (ivar == 1) then
-			val = sqrt(dx*dx + dy*dy)
-		elseif (ivar == 2) then
-			val = atan2(dy,dx)*180/PI
-		endif
-		k = (val-valmin(1,ivar))/dv(1,ivar) + 1
-		k = min(k,nhisto)
-		k = max(k,1)
-		cnt(1,ivar,k) = cnt(1,ivar,k) + 1
-!		k = (val-valmin(ict+1,ivar))/dv(ict+1,ivar) + 1
-!		k = min(k,nhisto)
-!		k = max(k,1)
-!		cnt(ict+1,ivar,k) = cnt(ict+1,ivar,k) + 1
-		if (val <= 1.0e-8) then
-			val_log = -8
-		else
-			val_log = log10(val)
-		endif
-		k = (val_log-valmin_log(1,ivar))/dv_log(1,ivar) + 1
-		k = min(k,nhisto)
-		k = max(k,1)
-		cnt_log(1,ivar,k) = cnt_log(1,ivar,k) + 1
-!		k = (val_log-valmin_log(ict+1,ivar))/dv_log(ict+1,ivar) + 1
-!		k = min(k,nhisto)
-!		k = max(k,1)
-!		cnt_log(ict+1,ivar,k) = cnt_log(ict+1,ivar,k) + 1
-	enddo
-enddo
-
-do i = 1,1
-	if (n(i) == 0) then
-		vmin((i-1)*nvars+1:i*nvars) = 0
-		vmax((i-1)*nvars+1:i*nvars) = 0
-		histo_data((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
-		vmin_log((i-1)*nvars+1:i*nvars) = 0
-		vmax_log((i-1)*nvars+1:i*nvars) = 0
-		histo_data_log((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
-	else
-		do ivar = 1,nvars
-			vmin((i-1)*nvars+ivar) = valmin(i,ivar)
-			vmax((i-1)*nvars+ivar) = valmax(i,ivar)
-			do ih = 1,nhisto
-				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
-				histo_data(k) = (100.*cnt(i,ivar,ih))/n(i)
-			enddo
-			vmin_log((i-1)*nvars+ivar) = valmin_log(i,ivar)
-			vmax_log((i-1)*nvars+ivar) = valmax_log(i,ivar)
-			do ih = 1,nhisto
-				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
-				histo_data_log(k) = (100.*cnt_log(i,ivar,ih))/n(i)
-			enddo
-		enddo
-	endif
-enddo
-deallocate(cnt)
-deallocate(dv)
-deallocate(valmin)
-deallocate(valmax)
-deallocate(cnt_log)
-deallocate(dv_log)
-deallocate(valmin_log)
-deallocate(valmax_log)
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine get_constituents(nvars,cvar_index,nvarlen,name_array,narraylen) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_constituents
-use, intrinsic :: iso_c_binding
-character(c_char) :: name_array(0:*)
-integer(c_int) :: nvars, cvar_index(0:*), nvarlen, narraylen
-integer :: ivar, k
-character*(24) :: name
-character(c_char) :: c
-
-write(nflog,*) 'get_constituents'
-nvarlen = 12
-ivar = 0
-k = ivar*nvarlen
-cvar_index(ivar) = 0
-name = 'Distance'
-call copyname(name,name_array(k),nvarlen)
-ivar = ivar + 1
-k = ivar*nvarlen
-cvar_index(ivar) = 1
-name = 'Angle'
-call copyname(name,name_array(k),nvarlen)
-nvars = ivar + 1
-write(nflog,*) 'did get_constituents'
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -533,14 +246,13 @@ integer(c_int) :: nTC_list, TC_list(*)
 integer :: k, kcell, j, site(3)
 integer :: itcstate, ctype
 
-! T cell section
+! Cell section
 k = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state /= ALIVE) cycle
 	k = k+1
 	j = 5*(k-1)
 	site = cell_list(kcell)%centre(:,1) + 0.5
-!	ctype = cell_list(kcell)%ctype
 	itcstate = 0
 	TC_list(j+1) = kcell-1
 	TC_list(j+2:j+4) = site
@@ -572,10 +284,8 @@ use_TCP = .false.   ! because this is called from para_main()							! --> use_TC
 return
 
 ncpu = 3
-infile = 'omp_para.inp'
-outfile = 'omp_para.out'
-!resfile = 'result.out'
-!runfile = ' '
+!infile = 'omp_para.inp'
+!outfile = 'omp_para.out'
 
 call get_command (b, len, status)
 if (status .ne. 0) then
@@ -626,10 +336,11 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: hour, nit, nt_hour, kcell, kpar=0
+integer :: hour, nit, nt_hour, kpar=0
 real(REAL_KIND) :: tnow, dt
 logical :: ok, done, changed
-logical :: use_RK = .false.
+
+
 
 res = 0
 if (Ncells == 0) then
@@ -675,16 +386,8 @@ if (.not.ok) then
 	return
 endif
 
-!call FEsolve
-
 call update_all_nbrlists
 
-if (use_RK) then
-	do kcell = 1,Ncells
-		perm_index(kcell) = kcell
-	enddo
-	call fmover_rk(tnow,DELTA_T,ok)
-else
 t_fmover = 0
 nit = 0
 done = .false.
@@ -698,18 +401,10 @@ do while (.not.done)
 	endif
 	t_fmover = t_fmover + dt
 	changed = .false.
-!	ncells0 = ncells
-!	call GrowCells(radiation_dose,dt,changed,ok)
-!	if (.not.ok) then
-!		call logger('grower error')
-!		res = 2
-!		return
-!	endif
 	if (changed) then
 		call make_perm_index(ok)
 	endif
 enddo
-endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -833,14 +528,6 @@ call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')
 
-if (calibrate_motility) then
-	call motility_calibration
-	stop
-endif
-
-!call FEsetup
-
-
 call PlaceCells(ok)
 if (ok) then
 	call logger('did PlaceCells: OK')
@@ -850,6 +537,9 @@ else
 endif
 if (.not.ok) return
 
+call FEsetup
+call logger('did FEsetup')
+
 nwallcells = 0
 !call make_wall
 
@@ -858,10 +548,6 @@ call setup_nbrlists
 
 return
 
-call init_counters
-if (TAGGED_LOG_PATHS) then
-	call setup_log_path_sites
-endif
 if (save_input) then
     call save_inputfile(inputfile)
 !	call save_inputfile(fixedfile)
@@ -875,7 +561,6 @@ write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell co
 call logger(logmsg)
 
 end subroutine
-
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -992,8 +677,10 @@ do i = 1,outbuflen
 enddo
 
 inquire(unit=nflog,OPENED=isopen)
+inquire(unit=nflog2,OPENED=isopen)
 if (.not.isopen) then
     open(nflog,file='tropho.log',status='replace')
+    open(nflog2,file='flow.log',status='replace')
 endif
 awp_0%is_open = .false.
 awp_1%is_open = .false.
@@ -1050,7 +737,7 @@ return
 
 end subroutine
 
-#if 0
+!------------------------------------------------------
 !------------------------------------------------------
 subroutine FEsetup
 
@@ -1073,7 +760,7 @@ integer, allocatable :: element2face(:,:)
 integer, allocatable :: face2element(:,:)
 integer, allocatable :: nodes2face(:,:)
 !integer, allocatable :: CylinCub_list(:,:)
-integer, allocatable :: el(:,:)
+
 !real (REAL_KIND), allocatable :: Centroids(:,:)
 real(REAL_KIND), allocatable :: BB(:)
 real(REAL_KIND), allocatable :: CC(:)
@@ -1085,7 +772,6 @@ integer :: nel,nel_z !number of elements
 
 logical :: answer1, answer2
 real (REAL_KIND) :: vertix_vec(8)
-real (REAL_KIND), allocatable :: e_Z(:)
 
 !---------------------------------
 ! We generate mesh nodes here
@@ -1139,6 +825,10 @@ real (REAL_KIND), allocatable :: e_Z(:)
 		All_Surfaces(i+j+k+m,:)= WALLs(m,:)
 	enddo
 	nofaces = size(All_Surfaces,1)
+
+	!do i=1,row_size
+     !   write(nflog, '(a,6i6)') 'all_faces ', All_Surfaces(i,:)
+    !enddo
 
 	allocate(nodes2face(6*nel,5))
 	allocate(element2face(nel,6))
@@ -1201,10 +891,10 @@ real (REAL_KIND), allocatable :: e_Z(:)
 	call unique(REAL(NINT(vertices(:,3)), REAL_KIND),e_Z)
 	!print *, "e_Z=", e_Z(:)
 	nel_z=size(e_Z)-1
-	allocate(el(nel_z,INT(nel/nel_z)))
+	allocate(layered_el(nel_z,INT(nel/nel_z)))
 	do k=2,nel_z+1
 		j=0
-		do e=1,size(Element,1)
+		do e=1,size(ELEMENT,1)
 			do i=1,8
 				vertix_vec(i)=REAL(NINT(vertices(ELEMENT(e,i),3)),REAL_KIND)
 			enddo
@@ -1212,44 +902,38 @@ real (REAL_KIND), allocatable :: e_Z(:)
 		answer2=isempty_find(vertix_vec,e_Z(k-1))
 			if ( .not.answer1 .AND. .not.answer2 ) then
 				j=j+1
-				el(k-1,j)=e
+				layered_el(k-1,j)=e
 			endif
 		enddo
 	enddo
 	!print *, "el=", el(1,:)
 
-	!allocate(BB(6*6*nel-CommonFaceNo))
-	!allocate(CC(6*nel))
-	!allocate(IB(6*6*nel-CommonFaceNo))
-	!allocate(JB(6*6*nel-CommonFaceNo))
-	!allocate(IC(6*nel))
-	!allocate(JC(6*nel))
 	allocate(B_MATRIX(nel))
     call READ_Bmatrix(nel)
 
 allocate(ElToFace(nel,6))
 ElToFace=element2face
+!allocate(FaToEl(nofaces,6))
+!FaToEl=face2element
 allocate(AllSurfs(row_size,6))
 AllSurfs=All_Surfaces
 NofElements=nel
-!allocate(B_MATRIX(6*6*nel-CommonFaceNo))
-!allocate(C_MATRIX(6*nel))
-!allocate(IB_MATRIX(6*6*nel-CommonFaceNo))
-!allocate(JB_MATRIX(6*6*nel-CommonFaceNo))
-!allocate(IC_MATRIX(6*nel))
-!allocate(JC_MATRIX(6*nel))
-!B_MATRIX= BB
-!write(nflog,*) B_MATRIX(1:10)
-!IB_MATRIX = IB
-!JB_MATRIX=JB
-!C_MATRIX=CC
-!IC_MATRIX=IC
-!JC_MATRIX=JC
-!allocate(Cyl_Centroids(nel,3))
-!Cyl_Centroids=Centroids
+NofElements_z=nel_z
+allocate(Cylinder_ELEMENT(nel,8))
+Cylinder_ELEMENT=ELEMENT
+allocate(Cylinder_vertices(size(vertices,1),3))
+Cylinder_vertices=vertices
+
+
+IF (ALLOCATED (u_cell_z)) DEALLOCATE (u_cell_z)
+allocate(u_cell_x(ncells))
+allocate(u_cell_y(ncells))
+allocate(u_cell_z(ncells))
+u_cell_x(:)=0.0D0
+u_cell_y(:)=0.0D0
+u_cell_z(:)=0.0D0
+!write(*,*) 'initial cell velocityz:  ', u_cell_z(1)
 end subroutine
-!------------------------------------------------------
-#endif
 
 end module
 

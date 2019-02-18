@@ -49,6 +49,14 @@
 			<Add option="-Wtabs" />
 			<Add option="-Iobj/release" />
 		</Compiler>
+		<Unit filename="../src/FEmapper.f90">
+			<Option weight="1" />
+			<Option target="DLL" />
+		</Unit>
+		<Unit filename="../src/Mesh_Generate.f90">
+			<Option weight="2" />
+			<Option target="DLL" />
+		</Unit>
 		<Unit filename="../src/Winsock_c.f90">
 			<Option weight="0" />
 			<Option target="DLL" />
@@ -70,15 +78,23 @@
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/fmotion.f90">
-			<Option weight="2" />
+			<Option weight="4" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/global.f90">
 			<Option weight="1" />
 			<Option target="DLL" />
 		</Unit>
+		<Unit filename="../src/m_unista.f90">
+			<Option weight="2" />
+			<Option target="DLL" />
+		</Unit>
 		<Unit filename="../src/nbr.f90">
 			<Option weight="2" />
+			<Option target="DLL" />
+		</Unit>
+		<Unit filename="../src/nleq1.f90">
+			<Option weight="0" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/pack.f90">
@@ -93,8 +109,12 @@
 			<Option weight="0" />
 			<Option target="DLL" />
 		</Unit>
-		<Unit filename="../src/rkc.f90">
-			<Option weight="0" />
+		<Unit filename="../src/sparse.f90">
+			<Option weight="3" />
+			<Option target="DLL" />
+		</Unit>
+		<Unit filename="../src/sparsekit.f90">
+			<Option weight="2" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tcpc.c">
@@ -102,11 +122,11 @@
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tropho3D.f90">
-			<Option weight="4" />
+			<Option weight="5" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tropho3D_main.f90">
-			<Option weight="5" />
+			<Option weight="6" />
 			<Option target="main" />
 		</Unit>
 		<Extensions>

@@ -76,7 +76,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -262,7 +262,7 @@ padding: 8px
               <x>150</x>
               <y>130</y>
               <width>271</width>
-              <height>201</height>
+              <height>221</height>
              </rect>
             </property>
             <property name="title">
@@ -274,7 +274,7 @@ padding: 8px
                <x>10</x>
                <y>10</y>
                <width>251</width>
-               <height>181</height>
+               <height>204</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_GLGL11">
@@ -301,7 +301,7 @@ padding: 8px
               <item row="1" column="0">
                <widget class="QMyLabel" name="label_A_FORCE">
                 <property name="text">
-                 <string>Cell-cell force factor 'a'</string>
+                 <string>Force factor 'a'</string>
                 </property>
                </widget>
               </item>
@@ -319,34 +319,14 @@ padding: 8px
                </widget>
               </item>
               <item row="2" column="0">
-               <widget class="QMyLabel" name="label_C_FORCE">
+               <widget class="QMyLabel" name="label_C_FORCE_CELL">
                 <property name="text">
-                 <string>Maximum attraction force 'c'</string>
+                 <string>Max cell-cell attraction 'c'</string>
                 </property>
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QLineEdit" name="line_C_FORCE">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QMyLabel" name="label_X0_FORCE">
-                <property name="text">
-                 <string>Left asymptote 'x0'</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="line_X0_FORCE">
+               <widget class="QLineEdit" name="line_C_FORCE_CELL">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
@@ -359,13 +339,33 @@ padding: 8px
                </widget>
               </item>
               <item row="4" column="0">
+               <widget class="QMyLabel" name="label_X0_FORCE">
+                <property name="text">
+                 <string>Left asymptote 'x0'</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QLineEdit" name="line_X0_FORCE">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
                <widget class="QMyLabel" name="label_X1_FORCE">
                 <property name="text">
                  <string>Right asymptote 'x1'</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="5" column="1">
                <widget class="QLineEdit" name="line_X1_FORCE">
                 <property name="maximumSize">
                  <size>
@@ -378,28 +378,28 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="2">
+              <item row="4" column="2">
                <widget class="QLabel" name="alabel_x0">
                 <property name="text">
                  <string>um</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="2">
+              <item row="5" column="2">
                <widget class="QLabel" name="alabel_x1">
                 <property name="text">
                  <string>um</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
+              <item row="6" column="0">
                <widget class="QMyLabel" name="label_KDRAG">
                 <property name="text">
                  <string>label_KDRAG</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="6" column="1">
                <widget class="QLineEdit" name="line_KDRAG">
                 <property name="maximumSize">
                  <size>
@@ -407,22 +407,48 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="7" column="0">
                <widget class="QMyLabel" name="label_FRANDOM">
                 <property name="text">
                  <string>label_FRANDOM</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="7" column="1">
                <widget class="QLineEdit" name="line_FRANDOM">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="line_C_FORCE_WALL">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QMyLabel" name="label_C_FORCE_WALL">
+                <property name="text">
+                 <string>Max cell-wall attraction 'c'</string>
                 </property>
                </widget>
               </item>
@@ -496,7 +522,7 @@ padding: 8px
               <item row="14" column="2">
                <widget class="QLineEdit" name="line_BG_FLOW_AMP">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="maximumSize">
                  <size>
@@ -849,7 +875,7 @@ padding: 8px
               <item row="14" column="0">
                <widget class="QMyLabel" name="label_BG_FLOW_AMP">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
                  <string>label_BG_FLOW_AMP</string>
@@ -1406,7 +1432,7 @@ padding: 8px
            </widget>
            <widget class="QGroupBox" name="groupBox_chemo">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="geometry">
              <rect>
@@ -1455,13 +1481,16 @@ padding: 8px
               <item row="3" column="2">
                <widget class="QLineEdit" name="line_CHEMO_GRAD_AMP_2">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="text">
+                 <string>1</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1517,7 +1546,7 @@ padding: 8px
               <item row="1" column="2">
                <widget class="QMyCheckBox" name="cbox_CHEMO_USED_2">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="maximumSize">
                  <size>
@@ -1530,6 +1559,9 @@ padding: 8px
                 </property>
                 <property name="text">
                  <string/>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>

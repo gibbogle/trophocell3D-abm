@@ -4,6 +4,8 @@ use global
 !use ISO_FORTRAN_ENV, only : REAL32, REAL64, REAL128
 
 contains
+
+!-----------------------------------------------
 !-----------------------------------------------
 subroutine face(NODES,ELEMENT,All_Surfaces,&
 				nodes2face,element2face,face2element)
@@ -150,6 +152,8 @@ do j = 1,size(face2element,1)
 	endif
 enddo
 end subroutine
+
+!-----------------------------------------------
 !-----------------------------------------------
 function notempty_find(vec,num) result(answer)
 integer :: vec(4), num, i
@@ -164,6 +168,7 @@ do i=1,4
 	endif
 enddo
 end function
+
 !----------------------------------------------
 !       ***for generating our own mesh**
 ! Here we make mesh nodes having the number of
@@ -207,6 +212,7 @@ enddo
 
 !nlist = counter
 end subroutine
+
 !--------------------------------------------------------
 !             ***for generating our own mesh**
 ! Here we make elements with node numbers:
@@ -221,9 +227,6 @@ integer, allocatable :: Elementlist(:,:)
 integer :: nel_x ,nel_y , nel_z, nel
 integer :: i, j, k, EN1, EN2, EN3, EN4, EN5, EN6, EN7, EN8
 integer :: NodeNo(8), ElCount
-
-
-
 
 allocate(Elementlist(Ep%nel,8))
 ElCount=0
@@ -253,6 +256,7 @@ enddo
 !enddo
 
 end subroutine
+
 !-------------------------------------------------------------------------
 !                     ***for generating our own mesh**
 !Here we define boundaries of the geometry e.g. in a cube we have
@@ -396,6 +400,7 @@ nfF = (nel_x)*(nel_y)
 	count2, count3, count4, count5, count6,nodes2face,element2face,face2element, nel)
 
 end subroutine
+
 !-------------------------------------------------------------------------------
 !                     ***for generating our own mesh**
 ! nodes2face: here we list the surfaces of each element with their node numbers
@@ -553,6 +558,7 @@ do j = 1,size(face2element,1)
 enddo
 !print *, "No of shared faces", CommonFaceNo
 end subroutine
+
 !-----------------------------------------------
 !        ***for generating our own mesh**
 !-----------------------------------------------
@@ -616,6 +622,7 @@ NCInlet(:) = LHS_face(:)
 !print *, "!!",NCInlet(:)
 
 end subroutine
+
 !------------------------------------------------
 subroutine set_boundary_condition(nel, inlet,outlet,walls,n2faces, &
 	DCInlet,DCOutlet, NCWall, NCInlet)
@@ -630,8 +637,8 @@ NCInlet(:)= find_face(nel, n2faces,inlet,size(inlet,1))
 !write (*,*) "NCInlet=", NCInlet(:)
 
 end subroutine
+
 !------------------------------------------------
-!
 !------------------------------------------------
 function find_face(nel,n2face,surface,counting) result(DC_surface)
 integer :: counting, j, i,nel , surface(:,:), n2face(:,:)
@@ -652,6 +659,7 @@ enddo
 !	print *, "!!", DC_surface(i)
 !enddo
 end function
+
 !------------------------------------------------
 ! This subroutine reads the .msh file generated
 ! using ICEM meshing software
@@ -671,11 +679,11 @@ msh_filename = 'CYLINDERCoarse_Ogrid_11by10.msh'
 
 
 end subroutine
+
+!------------------------------------------------
 !------------------------------------------------
 subroutine gmsh_data_read ( gmsh_filename,vertices, &
 							InternalFaces,INLET,OUTLET,WALLs)
-
-
 implicit none
 
 character * ( * ) :: gmsh_filename
@@ -891,8 +899,9 @@ k_filename = 'CYLINDERCoarse_Ogrid_11by10.k'
 !get the data
 	call k_data_read(k_filename,NODES,ELEMENT)
 
-
 end subroutine
+
+!--------------------------------------------------------------
 !--------------------------------------------------------------
 subroutine k_data_read(k_filename,NODES,ELEMENT)
 character * ( * ) :: k_filename
@@ -989,6 +998,8 @@ lineNum=0
 close (input)
 
 end subroutine
+
+!---------------------------------------------------------------
 !---------------------------------------------------------------
  subroutine hex_to_decimal(hex, decimaln)
     character*(*) :: hex, decimaln
@@ -1026,6 +1037,8 @@ read(string,*)  narray(1:3)
 read(string,'(z4)')  narray(4:4)
 read(string,*)  narray(5:n)
 end subroutine
+
+!-------------------------------------------------
 !-------------------------------------------------
   elemental subroutine str2int(str,results,sta)
     implicit none
@@ -1037,6 +1050,7 @@ end subroutine
     read(str,'(a)',iostat=sta)  results
   end subroutine str2int
 
+!-------------------------------------------------
 !-------------------------------------------------
 subroutine get_unit ( iunit )
 
@@ -1101,6 +1115,8 @@ subroutine get_unit ( iunit )
 
       return
 end subroutine
+
+!------------------------------------------
 !------------------------------------------
 function linspace(d1,d2,n)
 
@@ -1112,7 +1128,6 @@ real (REAL_KIND) :: linspace(n)
 
 INTEGER :: indxi
 
-
 linspace(1) = d1
 DO indxi= 0,n-2
    linspace(indxi+1) = d1+(DBLE(indxi)*(d2-d1))/DBLE(n-1)
@@ -1122,8 +1137,9 @@ linspace(n) = d2
 !MATLAB
 !linspace = [d1+(0:n-2)*(d2-d1)/(floor(n)-1) d2];
 
-
 end function
+
+!--------------------------------------------------
 !--------------------------------------------------
 subroutine meshgrid(xgv, ygv, zgv, X, Y, Z)
   implicit none
@@ -1141,6 +1157,8 @@ subroutine meshgrid(xgv, ygv, zgv, X, Y, Z)
     Z(i,:,:) = spread( zgv, 1, sY)
   enddo ! i
 end subroutine
+
+!--------------------------------------------------
 !--------------------------------------------------
 subroutine Read_face(file_name, NoRow, Nocol,n2f)
 character * ( * ) :: file_name
@@ -1171,6 +1189,8 @@ character (100) :: cur_line
 	enddo
 close (input)
 end subroutine
+
+!--------------------------------------------------
 !--------------------------------------------------
 subroutine Read_real(fileplace,file_name, NoRow, Nocol,n2f)
 
@@ -1204,6 +1224,8 @@ IF (ALLOCATED (n2f)) DEALLOCATE (n2f)
 	!print *, "size n2f", size(n2f,1), size(n2f,2)
 close (input)
 end subroutine
+
+!--------------------------------------------------
 !--------------------------------------------------
 subroutine Sampling_grid(Ep,coordinates,Elemlist)
 
@@ -1214,7 +1236,6 @@ subroutine Sampling_grid(Ep,coordinates,Elemlist)
 type(element_type) :: Ep
 real (REAL_KIND), allocatable :: coordinates(:,:)
 integer, allocatable :: Elemlist(:,:)
-
 
 Ep%nsd  = 3                             ! number of space dimensions
 Ep%nel_z = 50                       ! number of elements on z axis
@@ -1244,6 +1265,8 @@ Ep%volume = Ep%x_width*Ep%y_width*Ep%z_width
 
 
 end subroutine
+
+!------------------------------------------------------
 !------------------------------------------------------
 subroutine Sampling_grid_multiple(unit_x, unit_y, unit_z, Ep, Epm,&
 									coordinates,Elemlist)
@@ -1293,6 +1316,8 @@ Epm%volume = Epm%x_width*Epm%y_width*Epm%z_width;
 			EPm%nel_y,EPm%nel_z,coordinates,EPm%vol_fraction)
 !print *, "vol_fraction=", EPm%vol_fraction
 end subroutine
+
+!------------------------------------------------------
 !------------------------------------------------------
 subroutine mesh_cylinder_volume(volume,Elemlist,nel_x, &
 			nel_y,nel_z,coordinates,VolDist)
@@ -1355,7 +1380,6 @@ do i=1,total_elems
    endif
 enddo
 
-
 end  subroutine
-!-----------------------------------------------------
+
 end module

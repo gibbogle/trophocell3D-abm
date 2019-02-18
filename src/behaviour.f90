@@ -4,7 +4,6 @@ module behaviour
 use global
 use packer
 use chemokine
-!use motility
 
 implicit none
 
@@ -150,13 +149,16 @@ read(nfcell,*) ntgui						! interval between GUI outputs (timesteps)
 read(nfcell,*) idelay						! simulation step delay (ms)
 read(nfcell,*) ichemo_1
 read(nfcell,*) grad_amp(1)					! chemokine gradient amplitude
-read(nfcell,*) BG_flow_amp				    ! background velocity amplitude (um/min)
-!read(nfcell,*) Kdrag
-!read(nfcell,*) Kadhesion
-!read(nfcell,*) Kstay
+read(nfcell,*) ichemo_2
+read(nfcell,*) grad_amp(2)					! chemokine gradient amplitude
+read(nfcell,*) chemo_coef1					! Z chemotaxis1 exp(coef1*)
+read(nfcell,*) chemo_coef2					! Radial chemotaxis1 exp(coef2*)
+read(nfcell,*) BG_flow_amp					! background velocity amplitude (um/min)
+read(nfcell,*) inletPressure                ! inlet pressure
 read(nfcell,*) a_separation
 read(nfcell,*) a_force
-read(nfcell,*) c_force
+read(nfcell,*) c_force_cell
+read(nfcell,*) c_force_wall
 read(nfcell,*) x0_force
 read(nfcell,*) x1_force
 read(nfcell,*) kdrag
@@ -166,8 +168,9 @@ close(nfcell)
 
 call logger('Finished reading cell parameter file')
 
+inletPressure = inletPressure/(7.5)*10**(3)
 chemo(1)%used = (ichemo_1 == 1)
-chemo(2)%used = .false.
+chemo(2)%used = (ichemo_2 == 1)
 PI = 4*atan(1.0d0)
 
 DELTA_T = 60*DELTA_T			! min -> sec
@@ -206,36 +209,24 @@ write(nfout,*)
 close(nfcell)
 end subroutine
 
-!----------------------------------------------------------------------------------------
-! Save parameters (values hard-coded, not yet in input file)
-!----------------------------------------------------------------------------------------
-subroutine save_parameters
-
-write(nfout,'(a)') '---------------------------------------------------------------------------'
-write(nfout,'(a)') 'Hard-coded PARAMETERS'
-write(nfout,'(a)') '---------------------'
-write(nfout,'(a,f8.4)') 'DELTA_X: ',DELTA_X
-write(nfout,'(a,f8.2)') 'DELTA_T: ',DELTA_T
-write(nfout,*)
-end subroutine
-
 !-----------------------------------------------------------------------------------------
 ! When a T cell dies it is removed from the cell list (%ID -> 0)
 ! The count of sites to add is decremented, for later adjustment of the blob size.
+! NOT USED
 !-----------------------------------------------------------------------------------------
-subroutine Tcell_death(kcell)
+subroutine cell_death(kcell)
 integer :: kcell
 integer :: k, idc, site(3), indx(2), ctype, stype, region
 logical :: cognate
 
-!write(logmsg,*) 'Tcell_death: ',kcell
+!write(logmsg,*) 'cell_death: ',kcell
 !call logger(logmsg)
 cell_list(kcell)%ID = 0
 cell_list(kcell)%state = DEAD
 ctype = cell_list(kcell)%ctype
 ngaps = ngaps + 1
 if (ngaps > max_ngaps) then
-    write(*,*) 'Tcell_death: ngaps > max_ngaps'
+    write(*,*) 'cell_death: ngaps > max_ngaps'
     stop
 endif
 gaplist(ngaps) = kcell
@@ -244,78 +235,11 @@ Ncells = Ncells - 1
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! A cell divides.  It has already been determined that there is space for the extra cell.
-! The other cell is placed in freeslot of site2 (which may be the same site as kcell).
-! If the cell is in the periphery the site, slot etc is irrelevant.
-! NOT USED CURRENTLY
-!-----------------------------------------------------------------------------------------
-subroutine cell_division(kcell,site2,freeslot,ok)
-integer :: kcell, site2(3), freeslot
-logical :: ok
-integer :: icnew, ctype, gen, region, site(3), indx(2)
-integer :: iseq, tag, kfrom, kto
-real(REAL_KIND) :: tnow
-!type(cog_type), pointer :: p1, p2
-integer :: kpar = 0
-
-ok = .true.
-!tnow = istep*DELTA_T
-!p1 => cell_list(kcell)%cptr
-!cognate = .true.
-!gen = get_generation(p1)
-!call get_region(p1,region)
-!if (gen == TC_MAX_GEN) then
-!    write(logmsg,*) 'cell_division: reached maximum generation: ',kcell
-!	call logger(logmsg)
-!    return
-!endif
-!ndivided(gen) = ndivided(gen) + 1
-!tdivided(gen) = tdivided(gen) + (tnow - p1%dividetime)
-!effector = p1%effector
-!
-!if (ngaps > 0) then
-!    icnew = gaplist(ngaps)
-!    ngaps = ngaps - 1
-!else
-!    nlist = nlist + 1
-!    if (nlist > max_nlist) then
-!		write(logmsg,*) 'Error: cell_division: cell list full: ',nlist
-!		call logger(logmsg)
-!		ok = .false.
-!		return
-!	endif
-!    icnew = nlist
-!endif
-!cell_list(kcell)%lastdir = random_int(1,6,kpar)
-!gen = gen + 1
-!call set_generation(p1,gen)
-!ctype = cell_list(kcell)%ctype
-!tag = 0
-!call create_Tcell(icnew,cell_list(icnew),site2,ctype,cognate,gen,tag,0,region,.true.,ok)
-!if (.not.ok) return
-!
-!cell_list(icnew)%ID = cell_list(kcell)%ID               ! the progeny cell inherits the parent's ID
-!cell_list(icnew)%entrytime = cell_list(kcell)%entrytime ! and entrytime
-!
-!ndivisions = ndivisions + 1
-!
-!occupancy(site2(1),site2(2),site2(3))%indx(freeslot) = icnew
-!if (use_add_count) then
-!    nadd_sites = nadd_sites + 1
-!else
-!    write(logmsg,*) 'cell_division: No site removal code, use add count'
-!	call logger(logmsg)
-!	ok = .false.
-!    return
-!endif
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Create a new T cell.
+! Create a new cell.
 ! We need to give a progeny cell (the result of cell division) the same ID as its parent.
 ! This implies that there needs to be a flag to indicate that the cell results from division.
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,rsite,ctype,gen,tag,region,dividing,ok)
+subroutine create_cell(kcell,rsite,ctype,gen,tag,region,dividing,ok)
 type(cell_type), pointer :: cp
 integer :: kcell, ctype, gen, tag, region
 real(REAL_KIND) :: rsite(3)
@@ -326,7 +250,6 @@ integer :: kpar = 0
 ok = .true.
 tnow = istep*DELTA_T
 cp => cell_list(kcell)
-!cell%entrytime = tnow
 cp%birthtime = tnow
 if (dividing) then	!???????????????
     cp%ID = 0
@@ -341,16 +264,11 @@ cp%radius = Raverage
 cp%ctype = ctype
 cp%tag = tag
 cp%step = 0
-!cell%lastdir = random_int(1,6,kpar)
 cp%dtotal = 0
 cp%mitosis = 0
 cp%Iphase = .true.
 
 end subroutine
-
-!--------------------------------------------------------------------------------
-! Add a cell (kcell) with characteristics (ctype, gen, stage) at site.
-
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
@@ -379,6 +297,169 @@ enddo
 write(*,*) 'mean = ',sum/N
 end subroutine
 
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+subroutine PlaceCells(ok)
+logical :: ok
+integer :: kcell, i, ix, iy, iz, nxx, nyy, nzz
+integer :: gen, region, ctype, tag
+real(REAL_KIND) :: cell_radius, xrng, zrng, z0, dz, u, h
+real(REAL_KIND) :: centre(3), rsite(3), block_centre(3), plug_centre(3), x, y, z, r
+
+if (use_packing .or. use_makeRing) then
+    z0 = (plug_zmax + plug_zmin)/2
+    xrng = tube_radius
+    zrng = plug_zmax - plug_zmin
+    dz = zrng/2
+    plug_centre = [0.d0, 0.d0, z0]
+    cell_radius = Raverage
+    kcell = 0
+else!if (use_loosepack) then
+    !these setting are needed for running the part consistent with MATLAB
+    kcell = 0
+    cell_radius = Raverage
+    dz=(plug_zmax-plug_zmin)
+    xrng = tube_radius
+    nxx = (xrng/(2*cell_radius))*2
+    nzz = dz/(2*cell_radius) + 1
+
+endif
+!do ix = 0,nxx
+!	do iy = 0,nxx
+!		do iz = 0,nzz
+!			x = -xrng+cell_radius+(ix*2+mod(REAL(iy+iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+ix*2*cell_radius
+!			y = -xrng+cell_radius+sqrt(3.)*(iy+1/3.*mod(REAL(iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+iy*2*cell_radius
+!			z = plug_zmin+(iz*2*sqrt(6.)/3)*cell_radius!plug_zmin+iz*2*cell_radius
+!
+!			r = sqrt(x*x + y*y)
+!			if ((r<tube_radius) .AND. (z>plug_zmin .OR. z<plug_zmax)) then
+!				kcell = kcell + 1
+!				rsite = [x, y, z]
+!				!write (nflog,*) "cell z coor!!", kcell,ix,iy,iz,rsite
+!				gen = 1
+!				region = 0	! don't know about regions yet
+!				ctype = TROPHO_CELL
+!				tag = 0
+!				call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+!				if (.not.ok) return
+!			endif
+!		enddo
+!	enddo
+!enddo
+
+!close(out_unit)
+
+
+if (use_packing) then
+	nxx = 1.2*xrng/cell_radius
+	nzz = 1.5*dz/cell_radius
+	nyy = 1.3*nxx
+	call SelectCellLocations(nxx, nyy, nzz, cell_radius, block_centre)
+
+	write(nflog,*) 'nxx,nyy,nzz: ',nxx,nyy,nzz
+	write(nflog,'(a,3f8.1)') 'plug_centre: ',plug_centre
+	write(nflog,'(a,3f8.1)') 'block_centre: ',block_centre
+	do i = 1,nxx*nyy*nzz
+		if (cdist(i)+cell_radius > tube_radius) cycle
+		ix = xyz_lookup(i)%x
+		iy = xyz_lookup(i)%y
+		iz = xyz_lookup(i)%z
+		centre = cloc(ix,iy,iz)%centre - block_centre + plug_centre
+		if (centre(3) < plug_zmin .or. centre(3) > plug_zmax) cycle
+		u = centre(3) - z0
+		h = (1 + cos(u*PI/dz))*plug_hmax/2
+		!if (cdist(i) < tube_radius - h) cycle
+		kcell = kcell + 1
+		rsite = centre
+		!write(nflog,'(2i6,3i4,3f8.1)') kcell,i,ix,iy,iz,rsite
+		gen = 1
+		region = 0	! don't know about regions yet
+		ctype = TROPHO_CELL
+		tag = 0
+		call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+		!write(nflog,'(2i6,3i4,3f8.1)') kcell,i,ix,iy,iz,cell_list(kcell)%centre(:,1)
+		if (.not.ok) return
+	enddo
+	call FreeCellLocations
+elseif (use_loosepack) then
+    do ix = 0,nxx,2
+        do iy = 0,nxx,2
+            do iz = 0,nzz,2
+                x = -xrng+cell_radius+(ix*2+mod(REAL(iy+iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+ix*2*cell_radius
+                y = -xrng+cell_radius+sqrt(3.)*(iy+1/3.*mod(REAL(iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+iy*2*cell_radius
+                z = plug_zmin+(iz*2*sqrt(6.)/3)*cell_radius!plug_zmin+iz*2*cell_radius
+
+                r = sqrt(x*x + y*y)
+                if ((r+cell_radius<tube_radius) .AND. (z>plug_zmin .OR. z<plug_zmax)) then
+                    kcell = kcell + 1
+                    rsite = [x, y, z]
+				!write (nflog,*) "cell z coor!!", kcell,ix,iy,iz,rsite
+                    gen = 1
+                    region = 0	! don't know about regions yet
+                    ctype = TROPHO_CELL
+                    tag = 0
+                    call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+                    if (.not.ok) return
+                endif
+            enddo
+        enddo
+    enddo
+elseif (use_makeRing) then
+	nxx = tube_radius/(2*cell_radius) + 1
+	nzz = INT(dz/(2*cell_radius) )+ 2 !+1
+	do ix = -nxx,nxx
+		do iy = -nxx,nxx
+            x = ix*2*cell_radius	! (x,y,z) is the offset from the centre of the plug
+            y = iy*2*cell_radius
+            r = sqrt(x*x + y*y)
+            if (r + cell_radius > tube_radius) cycle
+			do iz = -nzz,nzz,2
+				z = iz*2*cell_radius
+				if (z < -dz .or. z > dz) cycle
+				h = (1 + cos(z*PI/dz))*plug_hmax/2
+				if (r < tube_radius - h) cycle
+				kcell = kcell + 1
+				rsite = [x, y, z0+z]
+				!write(nflog,'(i6,3i4,3f8.1)') kcell,ix,iy,iz,rsite
+				gen = 1
+				region = 0	! don't know about regions yet
+				ctype = TROPHO_CELL
+				tag = 0
+				call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+				if (.not.ok) return
+			enddo
+		enddo
+	enddo
+else
+!!!!!!this code that generates packed cells is consistent with my MATLAB code!!!!!
+do ix = 0,nxx
+	do iy = 0,nxx
+		do iz = 0,nzz
+			x = -xrng+cell_radius+(ix*2+mod(REAL(iy+iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+ix*2*cell_radius
+			y = -xrng+cell_radius+sqrt(3.)*(iy+1/3.*mod(REAL(iz,REAL_KIND),2.))*cell_radius!-Tube_radius+cell_radius+iy*2*cell_radius
+			z = plug_zmin+(iz*2*sqrt(6.)/3)*cell_radius!plug_zmin+iz*2*cell_radius
+
+			r = sqrt(x*x + y*y)
+			if ((r+cell_radius<tube_radius) .AND. (z>plug_zmin .OR. z<plug_zmax)) then
+				kcell = kcell + 1
+				rsite = [x, y, z]
+				!write (nflog,*) "cell z coor!!", kcell,ix,iy,iz,rsite
+				gen = 1
+				region = 0	! don't know about regions yet
+				ctype = TROPHO_CELL
+				tag = 0
+				call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+				if (.not.ok) return
+			endif
+		enddo
+	enddo
+enddo
+
+endif
+nlist = kcell
+ncells = kcell
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 ! Possible cell locations are in a close-packed rectangular block.  Locations outside the
 ! cylindrical vessel are eliminated, then cells in the assumed pre-existing gap are
@@ -395,7 +476,7 @@ end subroutine
 !	to     = plug_zmax (um)
 !	height = plug_hmax (um)
 !-----------------------------------------------------------------------------------------
-subroutine PlaceCells(ok)
+subroutine old_PlaceCells(ok)
 logical :: ok
 integer :: kcell, i, ix, iy, iz, nxx, nyy, nzz
 integer :: gen, region, ctype, tag
@@ -435,7 +516,7 @@ if (use_packing) then
 		region = 0	! don't know about regions yet
 		ctype = TROPHO_CELL
 		tag = 0
-		call create_Tcell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+		call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
 		if (.not.ok) return
 	enddo
 	call FreeCellLocations
@@ -460,7 +541,7 @@ else
 				region = 0	! don't know about regions yet
 				ctype = TROPHO_CELL
 				tag = 0
-				call create_Tcell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
+				call create_cell(kcell,rsite,ctype,gen,tag,region,.false.,ok)
 				if (.not.ok) return
 			enddo
 		enddo
@@ -468,10 +549,6 @@ else
 endif
 nlist = kcell
 ncells = kcell
-
-
 end subroutine
-
-
 
 end module

@@ -1,122 +1,12 @@
-double precision function spcrad(neqn,t,y)
-!DEC$ ATTRIBUTES DLLEXPORT :: spcrad
-use global
-integer :: neqn
-double precision :: t, y(neqn)
-spcrad = 10		!spcrad_value
-end function
-
-
 ! Motion based on forces
 module fmotion
 
 use global
-use rkc_90
+use behaviour
 
 implicit none
 
-real(REAL_KIND) :: work_rkc(8+5*3*(MAX_NLIST+1))
-
 contains
-
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine f_rkc(neqn,t,y,dydt,icase)
-integer :: neqn, icase
-real(REAL_KIND) :: t, y(neqn), dydt(neqn)
-integer :: kcell, j, k
-real(REAL_KIND) :: fmax
-logical :: ok
-real(REAL_KIND), allocatable  :: force(:,:,:)
-type(cell_type), pointer :: cp
-
-allocate(force(3,neqn/3,2))
-k = 0
-do kcell = 1,Ncells
-	cp => cell_list(kcell)
-	do j = 1,3
-		k = k + 1
-		cp%centre(j,1) = y(k)
-	enddo
-enddo
-
-call forces(force,fmax,ok)
-!write(*,'(a,2e12.3)') 'f_rkc: t, fmax: ',t,fmax
-
-do kcell = 1,neqn/3
-	cp => cell_list(kcell)
-	if (cp%state == GONE_BACK .or. cp%state == GONE_THROUGH) then
-		do j = 1,3
-			k = (kcell-1)*3 + j
-			dydt(k) = 0
-		enddo
-		cycle
-	endif
-	do j = 1,3
-		k = (kcell-1)*3 + j
-		dydt(k) = force(j,kcell,1)/kdrag
-	enddo
-enddo
-deallocate(force)
-end subroutine
-
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine fmover_rk(tstart,dt,ok)
-real(REAL_KIND) :: tstart, dt
-logical :: ok
-real(REAL_KIND) :: t, tend
-integer :: kcell, i, k
-real(REAL_KIND), allocatable :: xyz(:)
-type(cell_type), pointer :: cp
-! Variables for RKC
-integer :: neqn, ict, info(4), idid
-real(REAL_KIND) :: rtol, atol(1)
-type(rkc_comm) :: comm_rkc(1)
-
-write(*,'(a,2f8.1)') 'fmover_rk: t, dt: ',tstart, dt
-write(nflog,'(a,2f8.1)') 'fmover_rk: t, dt: ',tstart, dt
-allocate(xyz(3*Ncells))
-k = 0
-do kcell = 1,Ncells
-	cp => cell_list(kcell)
-	do i = 1,3
-		k = k + 1
-		xyz(k) = cp%centre(i,1)
-	enddo
-enddo
-neqn = k
-		
-ict = 1
-info(1) = 1
-info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
-info(3) = 1
-info(4) = 0
-rtol = 1d-2
-atol = rtol
-
-idid = 0
-t = tstart
-tend = t + dt
-call rkc(comm_rkc(1),neqn,f_rkc,xyz,t,tend,rtol,atol,info,work_rkc,idid,ict)
-if (idid /= 1) then
-	write(logmsg,*) 'Solver: Failed at t = ',t,' with idid = ',idid
-	call logger(logmsg)
-	ok = .false.
-	return
-endif
-
-k = 0
-do kcell = 1,Ncells
-	cp => cell_list(kcell)
-	do i = 1,3
-		k = k + 1
-		cp%centre(i,1) = xyz(k)
-	enddo
-enddo
-deallocate(xyz)
-
-end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! The time step size dt_move is set dynamically here.
@@ -139,7 +29,6 @@ if (ncells <= 1 .and. cell_list(1)%Iphase) then
 endif
 allocate(force(3,ncells,2))
 call forces(force,fmax,ok)
-write(*,'(a,2e12.3)') 'fmover: fmax: ',fmax
 
 if (fmax > 0) then
 	do
@@ -197,6 +86,7 @@ do kpar = 0,tMnodes-1
     do k1 = kfrom(kpar),kto(kpar)
 		kcell = perm_index(k1)
 		cp => cell_list(kcell)
+		if (cp%state == GONE_BACK .or. cp%state == GONE_THROUGH) cycle
 		if (cp%Iphase) then
 			dx1 = dt_move*force(:,k1,1)/kdrag
 			cp%centre(:,1) = cp%centre(:,1) + dx1
@@ -206,6 +96,12 @@ do kpar = 0,tMnodes-1
 			cp%centre(:,1) = cp%centre(:,1) + dx1
 			cp%centre(:,2) = cp%centre(:,2) + dx2
 		endif
+		if (cp%centre(3,1)>tube_length) then
+         !   call cell_death(kcell)
+            cp%state=GONE_BACK
+        elseif (cp%centre(3,1)<0) then
+            cp%state=GONE_THROUGH
+        endif
 	enddo
 enddo
 !omp end parallel do
@@ -219,7 +115,7 @@ end subroutine
 subroutine forces(force,fmax,ok)
 real(REAL_KIND) :: fmax, force(:,:,:)
 logical :: ok
-integer :: k1, kcell, kpar, nd, nr, nc(0:8), kfrom(0:8), kto(0:8), tMnodes
+integer :: k1, kcell, kpar, nd, nr, nc(0:8), kfrom(0:8), kto(0:8), tMnodes, k2
 real(REAL_KIND) :: F(3,2), r(3), c(3), radius, amp, fsum, dFwall(3), dFflow(3), dFchemo(3)
 real(REAL_KIND),allocatable :: cell_fmax(:)
 real(REAL_KIND) :: fflow = 0.005
@@ -253,23 +149,26 @@ allocate(cell_fmax(ncells))
 cell_fmax = 0
 fsum = 0
 call omp_set_num_threads(tMnodes)
+
+!write(*,'(a)') 'total force'
+
 !$omp parallel do private(k1,kcell,c,radius,r,dFflow,dFwall,dFchemo,amp,F,ok)
 do kpar = 0,tMnodes-1
     do k1 = kfrom(kpar),kto(kpar)
 	    kcell = perm_index(k1)
+	    !write(*,'(a,1i3)') 'cell num: ',kcell
+	    if (cell_list(kcell)%state == GONE_BACK .or. cell_list(kcell)%state == GONE_THROUGH) cycle
 	    c = cell_list(kcell)%centre(:,1)
 	    radius = cell_list(kcell)%radius(1)
 	    call get_cell_force(kcell,F,ok)
+	    !write(*,'(a,3f8.1)') 'Cell-cell force: ',F
 	    call get_random_dr(r)
 	    F(:,1) = F(:,1) + frandom*r
-		if (settling) then
-			! do nothing
-		else
-			call get_flow_force(c,radius,dFflow)
-			F(:,1) = F(:,1) + dFflow
-!			call get_chemo_force(c,radius,dFchemo)
-!			F(:,1) = F(:,1) + dFchemo
-		endif
+        call get_flow_force(kcell,c,radius,dFflow)
+		F(:,1) = F(:,1) + dFflow
+        call get_chemo_force(c,radius,dFchemo)
+        F(:,1) = F(:,1) + dFchemo
+		kcell_debug = kcell
 	    call get_wall_force(c,radius,dFwall,ok)
 	    if (.not.ok) then
 			write(*,*) 'Bad wall force'
@@ -277,6 +176,7 @@ do kpar = 0,tMnodes-1
 		endif
 	    F(:,1) = F(:,1) + dFwall
 	    force(:,k1,1) = F(:,1)
+        !write(*, '(3f10.1,$)') force(:,k1,1)
 	    amp = sqrt(dot_product(F(:,1),F(:,1)))
 	    cell_fmax(k1) = max(cell_fmax(k1),amp)
 	    if (.not.cell_list(kcell)%Iphase) then
@@ -287,6 +187,7 @@ do kpar = 0,tMnodes-1
         endif
     enddo
 enddo
+!write(nflog,*)
 !omp end parallel do
 fmax = maxval(cell_fmax(:))
 deallocate(cell_fmax)
@@ -298,7 +199,7 @@ subroutine get_cell_force(kcell,F,ok)
 integer :: kcell
 real(REAL_KIND) :: F(3,2)
 logical :: ok
-integer :: k2, knbr	
+integer :: k2, knbr
 integer :: isphere1, isphere2, nspheres1, nspheres2
 real(REAL_KIND) :: R1, c1(3), R2, c2(3), v(3), d, d_hat, dF, fmult
 logical :: incontact, Mphase
@@ -345,7 +246,7 @@ do k2 = 1,cp1%nbrs
 !				write(*,'(a,2i6,f8.2)') 'WALL nbr d: ',kcell,knbr,d
 !			endif
 			incontact = cp1%nbrlist(k2)%contact(isphere1,isphere2)
-			dF = get_force(R1,R2,d,incontact,ok)	! returns magnitude and sign of force 
+			dF = get_force(R1,R2,d,incontact,ok)	! returns magnitude and sign of force
             if (.not.ok) then
                 write(*,*) kcell,knbr,isphere1,isphere2
                 write(*,'(a,i6,3e12.3)') 'nbrlist: ',kcell,c1
@@ -381,9 +282,15 @@ subroutine get_wall_force(c,radius,F,ok)
 real(REAL_KIND) :: c(3), radius, F(3)
 logical :: ok
 real(REAL_KIND) :: dF(3)
-real(REAL_KIND) :: R, d, x, Fset, Famp
+real(REAL_KIND) :: R, d, x, Fset, Famp, b_force, dx, delta
 real(REAL_KIND) :: fwall = 0.005
 real(REAL_KIND) :: settling_factor = 1
+
+dx = x1_force - x0_force
+!b_force = -c_force*110 - 4*a_force/dx**2
+b_force = -c_force_wall - 4*a_force/dx**2
+delta = dx**2 + 4*a_force/b_force
+xcross2_force = (x0_force+x1_force)/2 + 0.5*sqrt(delta)
 
 ok = .true.
 if (c(3) < 0 .or. c(3) > tube_length) then
@@ -392,7 +299,7 @@ if (c(3) < 0 .or. c(3) > tube_length) then
 endif
 c(3) = 0
 R = sqrt(dot_product(c,c))
-d = tube_radius - R	! distance of the cell centre from the wall 
+d = tube_radius - R	! distance of the cell centre from the wall
 x = d/radius
 if (x < x0_force) then
 	write(logmsg,'(a,4e12.3)') 'Error: get_wall_force: x < x0: ',R,d,x,x0_force
@@ -404,8 +311,9 @@ endif
 if (x > xcross2_force) then
 	Famp = 0
 else
-	Famp = a_force/((x-x0_force)*(x1_force-x)) + b_force
+	Famp = a_force/((x-x0_force)*(x1_force-x))+ b_force
 	if (abs(Famp) > 10) then
+        write(*,'(a,i6)') 'No of Cell pushing on wall', kcell_debug
 		write(*,'(a,6f8.2)') 'Big wall force: R, tube_radius, d, radius, x, Famp: ',R, tube_radius, d, radius, x, Famp
 		write(*,'(a,4e12.3)') 'a_force,x0_force,x1_force,b_force: ',a_force,x0_force,x1_force,b_force
 		write(nflog,'(a,6f8.2)') 'Big wall force: R, tube_radius, d, radius, x, Famp: ',R, tube_radius, d, radius, x, Famp
@@ -427,37 +335,57 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine get_flow_force(c,radius,F)
+subroutine get_flow_force(cellNo,c,radius,F)
 real(REAL_KIND) :: c(3), radius, F(3)
-real(REAL_KIND) :: r, v(3)
-real(REAL_KIND) :: vmax = 1.0		! no idea what this should be
+real(REAL_KIND) :: r, v(3), k1, shear
+real(REAL_KIND) :: vmax = 0		! no idea what this should be
 real(REAL_KIND) :: kvdrag = 0.01	! convert velocity to drag force
+real(REAL_KIND) :: mu = 0.003
+real(REAL_KIND) :: Delta_P = 80
+integer :: cellNo
 
-c(3) = 0
-r = sqrt(dot_product(c,c))
-v = vmax*cos((r/tube_radius)*(PI/2))*[0, 0, -1]
-F = kvdrag*v
+!c(3) = 0
+!r = sqrt(dot_product(c,c))
+!vmax = tube_radius**2/(4*mu) * Delta_P/tube_length
+!v = vmax*(1-(r/tube_radius)**2) *[0, 0, -1]!cos((r/tube_radius)*(PI/2))*[0, 0, -1]
+
+!parametrisation:
+k1=0.01
+shear=0.6
+F= k1*shear*[0, 0, -1]
+
+!F(1) = k1*(0.0002*u_cell_x(cellNo)-0.0002)
+!F(2) = k1*(0.0002*u_cell_y(cellNo)-0.0002)
+!F(3) = k1*(0.0002*u_cell_z(cellNo)-0.0002)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine get_chemo_force(c,radius,F)
 real(REAL_KIND) :: c(3), radius, F(3)
-real(REAL_KIND) :: r
-real(REAL_KIND) :: fchemo = 0.0
+real(REAL_KIND) :: r, d
+real(REAL_KIND) :: fchemo1, fchemo2, theta
 
-c(3) = 0
-r = sqrt(dot_product(c,c))
-if (tube_radius - r < 3*radius) then
-	F = fchemo*[0, 0, 1]
-else
-	F = 0
+fchemo1 = grad_amp(1)
+fchemo2 = grad_amp(2)
+d = c(3)	!tube_length+c(3)
+r = sqrt(c(1)*c(1) + c(2)*c(2))
+theta = ATAN2(c(2),c(1))
+if (theta < 0) then
+    theta = theta+2*PI
+endif
+F = 0
+if (chemo(1)%used) then
+	F = F + fchemo1 *[0, 0, 1]*d/(tube_length)*EXP(chemo_coef1*r/tube_radius)
+endif
+if (chemo(2)%used) then
+	F = F + fchemo2 *[1, 0, 0]*r*cos(theta)*exp(chemo_coef2*r/tube_radius) + &
+		fchemo2 *[0, 1, 0]*r*sin(theta)*exp(chemo_coef2*r/tube_radius)
 endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! This force combines cell-cell repulsion and cell-cell attraction, which depends upon
-! the contact history, if use_hysteresis = .true.
+! This force combines cell-cell repulsion and cell-cell attraction.
 ! F > 0 = repulsion
 ! F < 0 = attraction
 !-----------------------------------------------------------------------------------------
@@ -465,46 +393,35 @@ function get_force(R1,R2,d,incontact,ok) result(F)
 real(REAL_KIND) :: R1, R2, d
 logical :: incontact, ok
 real(REAL_KIND) :: F
-real(REAL_KIND) :: x
+real(REAL_KIND) :: x, b_force, dx, delta
+
+dx = x1_force - x0_force
+!b_force = -c_force*13 - 4*a_force/dx**2
+b_force = -c_force_cell - 4*a_force/dx**2
+delta = dx**2 + 4*a_force/b_force
+xcross2_force = (x0_force+x1_force)/2 + 0.5*sqrt(delta)
 
 ok = .true.
 x = d/(R1+R2)
-!write(*,'(a,4e12.3)') 'get_force: ',R1,R2,d,x
-if (use_hysteresis) then
-	if ((incontact .and. x > xcross2_force) .or. &
-		(.not.incontact .and. x > xcross1_force)) then
-		F = 0
-		return
-	endif
-	if (x < x0_force) then
-		write(logmsg,'(a,3e12.3,2f8.3,a,L2)') 'Error: get_force: x < x0: ',R1,R2,d,x,x0_force,' incontact: ',incontact
-		call logger(logmsg)
-		F = 0
-		ok = .false.
-	!	stop
-	else
-		F = a_force/((x-x0_force)*(x1_force-x)) + b_force
-	endif
+
+if (x > xcross2_force) then
+	F = 0
+	return
+endif
+if (x < x0_force) then
+	write(logmsg,'(a,3e12.3,2f8.3,a,L2)') 'Error: get_force: x < x0: ',R1,R2,d,x,x0_force,' incontact: ',incontact
+	call logger(logmsg)
+	F = 0
+	ok = .false.
+!	stop
 else
-	if (x > xcross2_force) then
-		F = 0
-		return
-	endif
-	if (x < x0_force) then
-		write(logmsg,'(a,3e12.3,2f8.3,a,L2)') 'Error: get_force: x < x0: ',R1,R2,d,x,x0_force,' incontact: ',incontact
-		call logger(logmsg)
-		F = 0
-		ok = .false.
-	!	stop
-	else
-		F = a_force/((x-x0_force)*(x1_force-x)) + b_force
-	endif
+	F = a_force/((x-x0_force)*(x1_force-x)) + b_force
 endif
 end function
 
 !-----------------------------------------------------------------------------------------
 ! This force tries to maintain the desired separation distance d^ of the two parts of a
-! dividing cell.  
+! dividing cell.
 ! The force F > 0, tending to push the two "spheres" apart, when d < d^, and
 ! the force F < 0, tending to push them together, when d > d^.
 ! The original setup used distances in um, so to keep forces the same convert separation
@@ -537,38 +454,38 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine setup_force_parameters
 integer :: i
-real(REAL_KIND) :: dx, delta
+real(REAL_KIND) :: b_force, dx, delta
 real(REAL_KIND) :: epsilon, es_e, shift, sqr_es_e, k_v
 
 write(logmsg,'(a,f6.2)') 'force parameters: a_separation: ',a_separation
 call logger(logmsg)
-write(logmsg,'(a,4f6.2)') 'force parameters: a_force,c_force,x0_force,x1_force: ',a_force,c_force,x0_force,x1_force
+write(logmsg,'(a,4f6.2)') 'force parameters: a_force,c_force_cell,x0_force,x1_force: ',a_force,c_force_cell,x0_force,x1_force
 call logger(logmsg)
 
 dx = x1_force - x0_force
-b_force = -c_force - 4*a_force/dx**2
+b_force = -c_force_cell - 4*a_force/dx**2
 delta = dx**2 + 4*a_force/b_force
 xcross1_force = (x0_force+x1_force)/2 - 0.5*sqrt(delta)
 xcross2_force = (x0_force+x1_force)/2 + 0.5*sqrt(delta)
-write(logmsg,*) 'force parameters: xcross:',xcross1_force,xcross2_force
+write(logmsg,*) 'cell-cell force parameters: xcross:',xcross1_force,xcross2_force
 call logger(logmsg)
 
-dt_min = 1.0
+dt_min = 0.01
 !delta_min = 0.02e-4		! um -> cm
 !delta_max = 0.30e-4		! um -> cm
 delta_min = 0.02		! um
-delta_max = 0.30		! um
+delta_max = 0.10		! um
 delta_tmove = dt_min
 ndt = 5
 
 ! For cell-cell force hysteresis
-alpha_v = 0.25
-epsilon = 7.5
-es_e = 1
-shift = -6
-sqr_es_e = sqrt(es_e)
-k_v = 2/alpha_v - sqr_es_e + sqrt(es_e - shift/epsilon)
-k_detach = k_v*alpha_v/2
+!alpha_v = 0.25
+!epsilon = 7.5
+!es_e = 1
+!shift = -6
+!sqr_es_e = sqrt(es_e)
+!k_v = 2/alpha_v - sqr_es_e + sqrt(es_e - shift/epsilon)
+!k_detach = k_v*alpha_v/2
 
 end subroutine
 
@@ -585,7 +502,7 @@ real(REAL_KIND) :: r
 integer :: ndist = 2
 
 FlowVelocity = 0
-!r = sqrt((site(2)-y0)**2 + (site(3)-z0)**2) 
+!r = sqrt((site(2)-y0)**2 + (site(3)-z0)**2)
 !FlowVelocity = BG_flow_amp*(1 - (r/nradius)**ndist)
 end function
 

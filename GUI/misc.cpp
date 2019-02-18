@@ -181,16 +181,6 @@ void ExecThread::run()
 
     for (int i=1; i<= Global::nsteps; i++) {
 		bool updated = false;
-//        if (recordfrom >= 0 && i >= recordfrom-1 && i <= recordto) {
-//            record = true;
-//            LOG_MSG("record = true");
-//            if (first) {
-//                first = false;
-//                emit(action_VTK());
-//            }
-//        } else {
-//            record = false;
-//        }
 		if (paused && !updated) {
             snapshot();
 			updated = true;
@@ -212,16 +202,8 @@ void ExecThread::run()
         if (i%Global::summary_interval == 0) {
             Global::mutex1.lock();
             get_summary(Global::summaryData);
-//            getProfiles();
-            if (Global::showingFACS || Global::recordingFACS) {
-                getFACS();
-            }
             Global::mutex1.unlock();
             emit summary();		// Emit signal to update summary plots, at hourly intervals
-            if (Global::showingFACS || Global::recordingFACS) {
-//                emit facs_update();
-                emit histo_update();
-            }
 		}
 		if (stopped) break;
         if (i%Global::nt_vtk == 0) {
@@ -253,56 +235,6 @@ void ExecThread::snapshot()
     Global::mutex2.unlock();
 
     emit display(); // Emit signal to update VTK display
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void ExecThread::getProfiles()
-{
-    int k;
-
-//    k = PROFILE_CD69;
-//    get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_S1PR1;
-//    get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_CFSE;
-//    get_profile_cfse(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_STIM;
-//    get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_STIMRATE;
-//    get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_AVIDITY_LN;
-//    get_profile_avidity_ln(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_AVIDITY_PER;
-//    get_profile_avidity_per(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_GENERATION_LN;
-//    get_profile_generation_ln(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_FIRSTDCCONTACTTIME;
-//    get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
-//    k = PROFILE_DCBINDTIME;
-//    get_profile_dcbindtime(profile_x[k],profile_y[k],&profile_n[k]);
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void ExecThread::getFACS()
-{
-    get_nfacs(&Global::nFACS_cells);
-    if (!Global::FACS_data || Global::nFACS_cells*Global::nvars_used > Global::nFACS_dim) {
-        if (Global::FACS_data) free(Global::FACS_data);
-        Global::nFACS_dim = 3*Global::nFACS_cells*Global::nvars_used;   // 3* to avoid excessive malloc/free
-        Global::FACS_data = (double *)malloc(Global::nFACS_dim*sizeof(double));
-    }
-    get_facs(Global::FACS_data);
-    if (!Global::histo_data || Global::nhisto_bins*Global::nvars_used > Global::nhisto_dim) {
-        if (Global::histo_data) free(Global::histo_data);
-        if (Global::histo_data_log) free(Global::histo_data_log);
-        Global::nhisto_dim = 6*Global::nhisto_bins*Global::nvars_used;   // 2*3 to avoid excessive malloc/free (only 3* used)
-        Global::histo_data = (double *)malloc(Global::nhisto_dim*sizeof(double));
-        Global::histo_data_log = (double *)malloc(Global::nhisto_dim*sizeof(double));
-    }
-    get_histo(Global::nhisto_bins, Global::histo_data, Global::histo_vmin, Global::histo_vmax,
-              Global::histo_data_log, Global::histo_vmin_log, Global::histo_vmax_log);
 }
 
 //-----------------------------------------------------------------------------------------

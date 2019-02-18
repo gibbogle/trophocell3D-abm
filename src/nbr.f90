@@ -94,10 +94,6 @@ do kcell = 1,nlist
 	enddo
 	cp1%nbrs = nbrs
 	cp1%nbrlist(1:nbrs) = nbrlist(1:nbrs)
-    if (kcell == 1291) then 
-    	write(*,'(a,3i4)') 'kcell: ',kcell,nspheres1,nbrs
-	    write(*,'(10i6)') nbrlist(1:nbrs)%indx 
-    endif
 enddo
 end subroutine
 

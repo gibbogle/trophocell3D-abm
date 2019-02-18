@@ -1,24 +1,26 @@
 Module m_unista
 
 use global
-!use ISO_FORTRAN_ENV, only : REAL32, REAL64, REAL128
+
+implicit none
 
 contains
 
 !----------------------------------------------
-subroutine find_cell_in_CylElem(e_Z, nel_z,N_Cell,Element,vertices,el,cell_elem)
+!----------------------------------------------
+subroutine find_cell_in_CylElem(elZ, nel_z,N_Cell,Element,vertices,el,cell_elem)
 integer :: nel_z, N_Cell,i, m, k,e
 integer :: Element(:,:), el(:,:)
 integer :: cell_elem(:)
 integer :: base(6,4)
-real (REAL_KIND):: vertices(:,:),e_Z(:)
+real (REAL_KIND):: vertices(:,:),elZ(:)
 real (REAL_KIND):: normal(6,3),dP(6)
 
 do i=1,N_Cell
-	!print *, "!!", cell_list(i)%centre(:,1)
+	if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
     do k=2,nel_z+1
-        if ( cell_list(i)%centre(3,1)<=e_Z(k) .AND. &
-			cell_list(i)%centre(3,1)>=e_Z(k-1) ) then
+        if ( cell_list(i)%centre(3,1)<=elZ(k) .AND. &
+			cell_list(i)%centre(3,1)>=elZ(k-1) ) then
 			!print *, "!!", el(k-1,:)
             do m=1, size(el,2)
                 e=el(k-1,m)
@@ -30,11 +32,11 @@ do i=1,N_Cell
 				(vertices(base(1,2),:)-vertices(base(1,1),:)), &
 				(vertices(base(1,3),:)-vertices(base(1,1),:)))
                 dP(1) = dot_product(normal(1,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(1,1),:)))/sqrt(NORM2(normal(1,:)))
+				-vertices(base(1,1),:)))/norm(normal(1,:))
 				!*******************************************************
-				!NOTE that norm2 here is not using the built-in fortran funmction
-				!instead it is using norm2 function defined in global
-				!because of that I needed to take sqrt of the norm2
+				! NOTE that norm defined in global is the same as the fortran 
+				! intrinsic function NORM2, the Euclidean vector norm.
+				! NORM2 is in gfortran but not in Intel Fortran
 				!************************************************************
 
                 base(2,1) = Element(e,1)
@@ -45,7 +47,7 @@ do i=1,N_Cell
 				(vertices(base(2,2),:)-vertices(base(2,1),:)), &
 				(vertices(base(2,3),:)-vertices(base(2,1),:)))
                 dP(2) = dot_product(normal(2,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(2,1),:)))/sqrt(NORM2(normal(2,:)))
+				-vertices(base(2,1),:)))/norm(normal(2,:))
 
                 base(3,1) = Element(e,4)
 				base(3,2) = Element(e,3)
@@ -55,7 +57,7 @@ do i=1,N_Cell
 				(vertices(base(3,2),:)-vertices(base(3,1),:)), &
 				(vertices(base(3,3),:)-vertices(base(3,1),:)))
                 dP(3) = dot_product(normal(3,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(3,1),:)))/sqrt(NORM2(normal(3,:)))
+				-vertices(base(3,1),:)))/norm(normal(3,:))
 
                 base(4,1) = Element(e,1)
 				base(4,2) = Element(e,2)
@@ -65,7 +67,7 @@ do i=1,N_Cell
 				(vertices(base(4,2),:)-vertices(base(4,1),:)), &
 				(vertices(base(4,3),:)-vertices(base(4,1),:)))
                 dP(4) = dot_product(normal(4,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(4,1),:)))/sqrt(NORM2(normal(4,:)))
+				-vertices(base(4,1),:)))/norm(normal(4,:))
 
                 base(5,1) = Element(e,5)
 				base(5,2) = Element(e,8)
@@ -75,7 +77,7 @@ do i=1,N_Cell
 				(vertices(base(5,2),:)-vertices(base(5,1),:)), &
 				(vertices(base(5,3),:)-vertices(base(5,1),:)))
                 dP(5) = dot_product(normal(5,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(5,1),:)))/sqrt(NORM2(normal(5,:)))
+				-vertices(base(5,1),:)))/norm(normal(5,:))
 
                 base(6,1) = Element(e,2)
 				base(6,2) = Element(e,6)
@@ -85,7 +87,7 @@ do i=1,N_Cell
 				(vertices(base(6,2),:)-vertices(base(6,1),:)), &
 				(vertices(base(6,3),:)-vertices(base(6,1),:)))
                 dP(6) = dot_product(normal(6,:),(cell_list(i)%centre(:,1) &
-				-vertices(base(6,1),:)))/sqrt(NORM2(normal(6,:)))
+				-vertices(base(6,1),:)))/norm(normal(6,:))
 
 				!if ((i==1 .or. i==2) .and. (e==101)) then
 					!print *, "Element", Element(e,:)
@@ -105,8 +107,9 @@ do i=1,N_Cell
     enddo
 enddo
 
-
 end subroutine
+
+!----------------------------------------------
 !----------------------------------------------
 subroutine unique(vec,vec_unique)
 ! Return only the unique values from vec.
@@ -146,6 +149,8 @@ vec_unique = pack( vec, mask )
 !call ISORT (vec_unique, [0], size(vec_unique), 1)
 
 end subroutine unique
+
+!----------------------------------------------
 !----------------------------------------------
 subroutine grouping(N_Cell,uniquex,uniquez,Cellin,Cellonline,Cellonedge, &
 	Celloncorner, size_Cellin,size_Cellonline,size_Cellonedge,size_Celloncornet)
@@ -167,16 +172,18 @@ ll=0
 mm=0
 nn=0
 IF (ALLOCATED (Cellin)) DEALLOCATE (Cellin)
-allocate(Cellin(N_Cell,3))
+allocate(Cellin(ncells,3))
 IF (ALLOCATED (Cellboundary)) DEALLOCATE (Cellboundary)
-allocate(Cellboundary(N_Cell,3))
+allocate(Cellboundary(ncells,3))
 IF (ALLOCATED (Cellonline)) DEALLOCATE (Cellonline)
-allocate(Cellonline(N_Cell,3))
+allocate(Cellonline(ncells,3))
 IF (ALLOCATED (Cellonedge)) DEALLOCATE (Cellonedge)
-allocate(Cellonedge(N_Cell,3))
+allocate(Cellonedge(ncells,3))
 IF (ALLOCATED (Celloncorner)) DEALLOCATE (Celloncorner)
-allocate(Celloncorner(N_Cell,3))
+allocate(Celloncorner(ncells,3))
 do i=1,N_Cell
+    !if (cell_list(i)%state /= ALIVE) cycle
+    if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
 	answer1=isempty_find(uniquex,cell_list(i)%centre(1,1))
 	answer2=isempty_find(uniquex,cell_list(i)%centre(2,1))
 	answer3=isempty_find(uniquez,cell_list(i)%centre(3,1))
@@ -184,10 +191,6 @@ do i=1,N_Cell
 		jj=jj+1
 		!print *, "!!", i
 		Cellin(jj,:) = cell_list(i)%centre(:,1)
-	!elseif ( abs(cell_list(i)%centre(1,1))==200 .OR. &
-	!		abs(cell_list(i)%centre(2,1))==200 ) then
-	!	mm=mm+1
-	!	Cellboundary(mm,:) =cell_list(i)%centre(:,1)
 	elseif (.not.answer1 .AND. answer2 .AND. answer3) then
 		kk=kk+1
 		Cellonline(kk,:) = cell_list(i)%centre(:,1)
@@ -214,11 +217,9 @@ size_Cellin=jj
 size_Cellonline=kk
 size_Cellonedge=nn
 size_Celloncornet=ll
-!print *, "size_Cellin", size_Cellin
-!print *, "size_Cellonline", size_Cellonline
-!print *, "size_Cellonedge", size_Cellonedge
-!print *, "size_Celloncornet", size_Celloncornet
 end subroutine
+
+!----------------------------------------------
 !----------------------------------------------
 function isempty_find(vec,num) result(answer)
 
@@ -239,6 +240,8 @@ else
 	answer = .false.
 end if
 end function
+
+!----------------------------------------------
 !----------------------------------------------
 subroutine cellcount(EPm,EpmCoor,EPmIEN,Cell,sizeCell,countedCells)
 
@@ -253,9 +256,6 @@ real (REAL_KIND), allocatable :: normal(:,:)
 real (REAL_KIND), allocatable :: dP(:)
 real (REAL_KIND), allocatable :: face_area(:)
 
-!integer, parameter :: out_unit=20
-
-!open (unit=out_unit,file="CellZCoor.txt",action="write",status="replace")
 IF (ALLOCATED (countedCells)) DEALLOCATE (countedCells)
 allocate(countedCells(EPm%nel))
 countedCells(:) = 0
@@ -268,13 +268,10 @@ allocate(dP(6))
 IF (ALLOCATED (face_area)) DEALLOCATE (face_area)
 allocate(face_area(6))
 
-
-!print *, "!!", EPm%z_width
 do i=1,sizeCell
 !i=1
 	do k=1,EPm%nel_z
 		if (Cell(i,3)<=k*EPm%z_width .AND. Cell(i,3)>=(k-1)*EPm%z_width) then
-			!write (*,*) "cell z coor!!", i,Cell(i,3)
 			do e=(k-1)*EPm%nel_x*Epm%nel_y+1 , (k)*EPm%nel_x*EPm%nel_y
 				sum_PyVol=0.0D+00
 
@@ -285,15 +282,13 @@ do i=1,sizeCell
                 normal(1,:) = cross( &
 				EpmCoor(base(1,2),:)- EpmCoor(base(1,1),:), &
 				EpmCoor(base(1,3),:)-EpmCoor(base(1,1),:) )
-				!print *, "normal", normal(1,:)
                 dP(1) = dot_product(normal(1,:),(Cell(i,:)- &
-									EpmCoor(base(1,1),:) ) )/sqrt(NORM2(normal(1,:)))
-                !*******************************************************
-				!NOTE that norm2 here is not using the built-in fortran funmction
-				!instead it is using norm2 function defined in global
-				!because of that I needed to take sqrt of the norm2
+									EpmCoor(base(1,1),:) ) )/norm(normal(1,:))
+				!*******************************************************
+				! NOTE that norm defined in global is the same as the fortran 
+				! intrinsic function NORM2, the Euclidean vector norm.
+				! NORM2 is in gfortran but not in Intel Fortran
 				!************************************************************
-				!print *, "dp", dP(1)
                 face_area(1)=EPm%x_width*EPm%z_width
 
 				base(2,1) = EPmIEN(e,1)
@@ -304,7 +299,7 @@ do i=1,sizeCell
 				EpmCoor(base(2,2),:)-EpmCoor(base(2,1),:), &
 				EpmCoor(base(2,3),:)-EpmCoor(base(2,1),:) )
                 dP(2) = dot_product(normal(2,:),(Cell(i,:)- &
-									EpmCoor(base(2,1),:) ) )/sqrt(NORM2(normal(2,:)))
+									EpmCoor(base(2,1),:) ) )/norm(normal(2,:))
                 face_area(2)=EPm%x_width*EPm%z_width
 
 				base(3,1) = EPmIEN(e,2)
@@ -315,7 +310,7 @@ do i=1,sizeCell
 				EpmCoor(base(3,2),:)-EpmCoor(base(3,1),:), &
 				EpmCoor(base(3,3),:)-EpmCoor(base(3,1),:) )
                 dP(3) = dot_product(normal(3,:),(Cell(i,:)- &
-									EpmCoor(base(3,1),:) ) )/sqrt(NORM2(normal(3,:)))
+									EpmCoor(base(3,1),:) ) )/norm(normal(3,:))
                 face_area(3)=EPm%x_width*EPm%z_width
 
 				base(4,1) = EPmIEN(e,1)
@@ -326,7 +321,7 @@ do i=1,sizeCell
 				EpmCoor(base(4,2),:)-EpmCoor(base(4,1),:), &
 				EpmCoor(base(4,3),:)-EpmCoor(base(4,1),:) )
                 dP(4) = dot_product(normal(4,:),(Cell(i,:)- &
-									EpmCoor(base(4,1),:) ) )/sqrt(NORM2(normal(4,:)))
+									EpmCoor(base(4,1),:) ) )/norm(normal(4,:))
                 face_area(4)=EPm%x_width*EPm%y_width
 
 				base(5,1) = EPmIEN(e,5)
@@ -337,7 +332,7 @@ do i=1,sizeCell
 				EpmCoor(base(5,2),:)-EpmCoor(base(5,1),:), &
 				EpmCoor(base(5,3),:)-EpmCoor(base(5,1),:) )
                 dP(5) = dot_product(normal(5,:),(Cell(i,:)- &
-									EpmCoor(base(5,1),:) ) )/sqrt(NORM2(normal(5,:)))
+									EpmCoor(base(5,1),:) ) )/norm(normal(5,:))
                 face_area(5)=EPm%x_width*EPm%y_width
 
 				base(6,1) = EPmIEN(e,3)
@@ -348,42 +343,25 @@ do i=1,sizeCell
 				EpmCoor(base(6,2),:)-EpmCoor(base(6,1),:), &
 				EpmCoor(base(6,3),:)-EpmCoor(base(6,1),:) )
                 dP(6) = dot_product(normal(6,:),(Cell(i,:)- &
-									EpmCoor(base(6,1),:) ) )/sqrt(NORM2(normal(6,:)))
+									EpmCoor(base(6,1),:) ) )/norm(normal(6,:))
                 face_area(6)=EPm%x_width*EPm%z_width
 
 				do j=1,6
 					Pyramids_volume = abs(dP(j))*face_area(j)/3.
-					!print *, "!!", Pyramids_volume
                     sum_PyVol = sum_PyVol+ Pyramids_volume
 				enddo
 
-				!if (i==21 .AND. e==17) then
-						!print *, "dp", dP(:)
-						!print *, "normal 1!", normal(1,:)
-						!print *, "normal 2!", normal(2,:)
-						!print *, "normal 3!", normal(3,:)
-						!print *, "normal 4!", normal(4,:)
-						!print *, "normal 5!", normal(5,:)
-						!print *, "normal 6!", normal(6,:)
-						!print *, "face_area", face_area(:)
-						!print *, "!!", NINT(sum_PyVol)
-						!print *, "Cell!", i, Cell(i,:)
-				!endif
-
 				if (NINT(sum_PyVol)==EPm%volume) then
                    countedCells(e)=countedCells(e)+1;
-					!write (out_unit,*) "e, i, cell coor!!", e, i,Cell(i,:)
-				!else
-				 !  print *, "sum_PyVol!!", e, sum_PyVol
                 endif
 			enddo
 		endif
 	enddo
 enddo
-!close (out_unit)
 
-!print *, "EPm%volume", EPm%volume
 end subroutine
+
+!-----------------------------------------
 !-----------------------------------------
 FUNCTION cross(a, b)
   real (REAL_KIND), DIMENSION(3) :: cross
@@ -393,6 +371,8 @@ FUNCTION cross(a, b)
   cross(2) = a(3) * b(1) - a(1) * b(3)
   cross(3) = a(1) * b(2) - a(2) * b(1)
 END FUNCTION cross
+
+!---------------------------------
 !---------------------------------
 subroutine refined_k_grid(coordinates,fitted_k,EP,EPCoordinates, &
 							EPm_Elemlist, k_new)
@@ -404,10 +384,6 @@ real (REAL_KIND) :: eta1, eta2, eta3
 real (REAL_KIND) :: k_new(size(coordinates,1))
 integer :: e, i
 
-!integer, parameter :: out_unit=20
-
-!open (unit=out_unit,file="K_ref.txt",action="write",status="replace")
-
 do i = 1,size(coordinates,1)
 
     call FIND_ELEM(EP%x_min,EP%y_min,EP%z_min,EP%x_width,EP%y_width, &
@@ -417,10 +393,6 @@ do i = 1,size(coordinates,1)
     eta1 = (coordinates(i,1) - EPCoordinates(EPm_Elemlist(e,1),1))/EP%x_width
     eta2 = (coordinates(i,2) - EPCoordinates(EPm_Elemlist(e,1),2))/EP%y_width
     eta3 = (coordinates(i,3) - EPCoordinates(EPm_Elemlist(e,1),3))/EP%z_width
-
-	!print *, " eta1=", eta1
-	!print *, " eta2=", eta2
-	!print *, " eta3=", eta3
 
     if (eta1 < 10**(-10)) then
         eta1 = 0
@@ -453,12 +425,12 @@ do i = 1,size(coordinates,1)
 	mat(8) = fitted_k(EPm_Elemlist(e,8),1)
 
     k_new(i) = dot_product(basis,mat)
-	!write (out_unit,*) " k_new=", k_new(i)
 
 enddo
-!close (out_unit)
 
 end subroutine
+
+!---------------------------------
 !---------------------------------
 subroutine FIND_K_Cylinder(k_elem,ep, EP_Elemlist, EP_coordinates, Cent,CylinCub,k_Cylinder)
 real (REAL_KIND) :: k_elem(:), EP_coordinates(:,:)
@@ -471,11 +443,14 @@ integer :: i, e
 !integer, parameter :: out_unit=20
 
 !open (unit=out_unit,file="k_Cylinder.txt",action="write",status="replace")
+
+!write (*,*)  " size of centers=", size(Cent,1)
 do i =1,size(Cent,1)
     k_Cylinder(i)= k_elem(CylinCub(i,2))
     if (k_Cylinder(i)<0.285) then
         k_Cylinder(i)=0.285
     endif
+    !write (out_unit,*) " k_Cylinder=", k_Cylinder(i)
 enddo
 !coef=1/(ep%x_width*ep%y_width*ep%z_width);
 !x_width=ep%x_width
@@ -524,6 +499,8 @@ enddo
 !enddo
 !close (out_unit)
 end subroutine
+
+!----------------------------------
 !----------------------------------
 subroutine find_k_mid(k_ref,EP,EP_Elemlist, k_mid)
 real (REAL_KIND) :: k_ref(:), k_mid(:)
@@ -559,6 +536,8 @@ coef = 1/(EP%x_width*EP%y_width*EP%z_width)
 enddo
 
 end subroutine
+
+!----------------------------------
 !----------------------------------
 subroutine FIND_ELEM(x_min,y_min,z_min,x_width,y_width, &
 	z_width,nel_x,nel_y,nel_z,datapoints, e)
@@ -587,5 +566,5 @@ endif
 e = (num_z-1)*nel_x*nel_y + (num_y-1)*nel_x + num_x;
 
 end subroutine
-!----------------------------------
+
 end module m_unista

@@ -26,10 +26,8 @@
 				</Compiler>
 				<Linker>
 					<Add library="C:\Program Files (x86)\mingw-w64\mingw32\i686-w64-mingw32\lib\libws2_32.a" />
-					<Add library="D:\suitesparse-metis-for-windows\build\lib\libumfall.a" />
-					<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\libblas.lib" />
-					<Add library="D:\suitesparse-metis-for-windows\lapack_windows\x32\liblapack.lib" />
 					<Add library="C:\Program Files (x86)\mingw-w64\mingw32\lib\gcc\i686-w64-mingw32\4.9.2\libgomp.a" />
+					<Add library="..\..\testing\SuperLU_MT\pdlinsol3\Release\libpdlinsol.a" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="myvsvars32-vs10.bat" />
@@ -78,6 +76,10 @@
 			<Option weight="3" />
 			<Option target="DLL" />
 		</Unit>
+		<Unit filename="../src/c_f_wrapper.c">
+			<Option compilerVar="CC" />
+			<Option target="DLL" />
+		</Unit>
 		<Unit filename="../src/chemokine.f90">
 			<Option weight="2" />
 			<Option target="DLL" />
@@ -87,7 +89,7 @@
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/fmotion.f90">
-			<Option weight="2" />
+			<Option weight="4" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/global.f90">
@@ -123,7 +125,7 @@
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/sparsekit.f90">
-			<Option weight="0" />
+			<Option weight="2" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tcpc.c">
@@ -131,19 +133,11 @@
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tropho3D.f90">
-			<Option weight="4" />
+			<Option weight="5" />
 			<Option target="DLL" />
 		</Unit>
 		<Unit filename="../src/tropho3D_main.f90">
-			<Option weight="5" />
-		</Unit>
-		<Unit filename="../src/umf4_f77wrapper.c">
-			<Option compilerVar="CC" />
-			<Option target="DLL" />
-		</Unit>
-		<Unit filename="../src/umf_solver.f90">
-			<Option weight="0" />
-			<Option target="DLL" />
+			<Option weight="6" />
 		</Unit>
 		<Extensions>
 			<code_completion />

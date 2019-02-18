@@ -44,8 +44,6 @@ public:
 	ExecThread(QString);
 	void run();
     void snapshot();
-    void getProfiles();
-    void getFACS();
     void pause();
 	void unpause();
 	void stop();
