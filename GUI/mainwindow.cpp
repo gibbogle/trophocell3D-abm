@@ -1646,8 +1646,6 @@ void MainWindow::preConnection()
 	// Initialize graphs
 	initializeGraphs(newR);
     LOG_MSG("did initializeGraphs");
-    printf("nGraphs: %d\n",nGraphs);
-    fflush(stdout);
 
     Global::nhisto_bins = lineEdit_nhistobins->text().toInt();
 
@@ -1817,7 +1815,7 @@ void MainWindow::redimensionCellArrays(int nbond_size)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::displayScene()
 {
-//    LOG_MSG("displayScene");
+    LOG_MSG("displayScene");
 	bool redo = false;	// need to understand this
 	started = true;
 	bool fast = true;
@@ -3263,7 +3261,6 @@ int SliderPlus::nTicks() {
 //----------------------------
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    printf("Close event\n");
 //    fflush(stdout);
 //    goToInputs();
 //    removeGraphs();

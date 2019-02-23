@@ -169,7 +169,7 @@ void ExecThread::run()
     sprintf(msg,"summary_interval: %d nt_vtk: %d",Global::summary_interval,Global::nt_vtk);
     LOG_MSG(msg);
     Global::mutex1.lock();
-    emit setupC();
+//    emit setupC();
     get_summary(Global::summaryData);
     LOG_MSG("did get_summary");
 //    getProfiles();

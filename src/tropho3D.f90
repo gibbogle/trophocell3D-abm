@@ -1,4 +1,4 @@
-! Implementing a list of cells:
+! Implementing a list of cells: 
 ! In this version the cells in the domain are stored in a list, while the
 ! occupancy array holds the indices of cells in the list.  When a cell
 ! leaves the domain or dies a gap is created in the list.
@@ -865,7 +865,10 @@ real (REAL_KIND) :: vertix_vec(8)
 	!print *, "CommonFaceNo", CommonFaceNo
 	!print *, "f2e", face2element(1,:)
 
-
+	if (allocated(DCInlet)) deallocate(DCInlet)
+	if (allocated(DCOutlet)) deallocate(DCOutlet)
+	if (allocated(NCWall)) deallocate(NCWall)
+	if (allocated(NCInlet)) deallocate(NCInlet)
 !set boundary condition
 	!1)set up dirichlet surfaces
 	allocate(DCInlet(size(INLET,1)))
@@ -873,8 +876,8 @@ real (REAL_KIND) :: vertix_vec(8)
 	!2)set up Neumann surfaces - normal flux in/out = neumann wall
 	allocate(NCWall(size(WALLs,1)))
 	allocate(NCInlet(size(INLET,1)))
-	call set_boundary_condition(nel, INLET,OUTLET,WALLs,All_Surfaces, &
-	DCInlet,DCOutlet, NCWall, NCInlet)
+	call set_boundary_condition(nel, INLET,OUTLET,WALLs,All_Surfaces)	!, &
+!	DCInlet,DCOutlet, NCWall, NCInlet)
 	!print *, "inlet face=", DCInlet
 	!print *, "outlet face=", DCOutlet
 	!write (*,*) "wall face=", NCWall
@@ -891,6 +894,7 @@ real (REAL_KIND) :: vertix_vec(8)
 	call unique(REAL(NINT(vertices(:,3)), REAL_KIND),e_Z)
 	!print *, "e_Z=", e_Z(:)
 	nel_z=size(e_Z)-1
+	if (allocated(layered_el)) deallocate(layered_el)
 	allocate(layered_el(nel_z,INT(nel/nel_z)))
 	do k=2,nel_z+1
 		j=0
@@ -908,8 +912,17 @@ real (REAL_KIND) :: vertix_vec(8)
 	enddo
 	!print *, "el=", el(1,:)
 
-	allocate(B_MATRIX(nel))
-    call READ_Bmatrix(nel)
+if (allocated(B_matrix)) deallocate(B_matrix)
+if (allocated(ElToFace)) deallocate(ElToFace)
+if (allocated(AllSurfs)) deallocate(AllSurfs)
+if (allocated(Cylinder_element)) deallocate(Cylinder_element)
+if (allocated(Cylinder_vertices)) deallocate(Cylinder_vertices)
+if (allocated(u_cell_x)) deallocate(u_cell_x)
+if (allocated(u_cell_y)) deallocate(u_cell_y)
+if (allocated(u_cell_z)) deallocate(u_cell_z)
+
+allocate(B_MATRIX(nel))
+call READ_Bmatrix(nel)
 
 allocate(ElToFace(nel,6))
 ElToFace=element2face
@@ -924,8 +937,6 @@ Cylinder_ELEMENT=ELEMENT
 allocate(Cylinder_vertices(size(vertices,1),3))
 Cylinder_vertices=vertices
 
-
-IF (ALLOCATED (u_cell_z)) DEALLOCATE (u_cell_z)
 allocate(u_cell_x(ncells))
 allocate(u_cell_y(ncells))
 allocate(u_cell_z(ncells))

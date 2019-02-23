@@ -495,6 +495,7 @@ end subroutine
 ! f(R) = 0
 ! df(0)/dr = 0
 ! ==> f(r) = Vmax(1 - (r/R)^2)
+! NOT USED
 !--------------------------------------------------------------------------------
 real(REAL_KIND) function FlowVelocity(site)
 integer :: site(3)
@@ -507,6 +508,7 @@ FlowVelocity = 0
 end function
 
 !--------------------------------------------------------------------------------
+! NOT USED
 !--------------------------------------------------------------------------------
 subroutine make_wall
 real(REAL_KIND) :: R, dtheta, dz, theta, x, y, z

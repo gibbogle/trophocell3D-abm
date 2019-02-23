@@ -624,17 +624,17 @@ NCInlet(:) = LHS_face(:)
 end subroutine
 
 !------------------------------------------------
-subroutine set_boundary_condition(nel, inlet,outlet,walls,n2faces, &
-	DCInlet,DCOutlet, NCWall, NCInlet)
+!------------------------------------------------
+subroutine set_boundary_condition(nel, inlet,outlet,walls,n2faces)	!, &
+!	DCInlet,DCOutlet, NCWall, NCInlet)	! Note: these arrays are global
 integer :: inlet(:,:),outlet(:,:),walls(:,:),n2faces(:,:)
-integer :: DCInlet(:),DCOutlet(:), NCWall(:), NCInlet(:)
+!integer :: DCInlet(:),DCOutlet(:), NCWall(:), NCInlet(:)
 integer :: nel
 
 DCInlet(:)= find_face(nel,n2faces,inlet,size(inlet,1))
 DCOutlet(:)= find_face(nel, n2faces,outlet,size(outlet,1))
 NCWall(:)= find_face(nel, n2faces,walls,size(walls,1))
 NCInlet(:)= find_face(nel, n2faces,inlet,size(inlet,1))
-!write (*,*) "NCInlet=", NCInlet(:)
 
 end subroutine
 
@@ -1167,26 +1167,26 @@ integer :: input_stat,I, ii,Nocol,NoRow
 integer, allocatable :: n2f(:,:)
 character (100) :: cur_line
 
-	!call get_unit ( input )
-    input=nfinput
-    open ( unit = input, file = file_name, status = 'old', &
-	 iostat = input_stat )
+!call get_unit ( input )
+input=nfinput
+open ( unit = input, file = file_name, status = 'old', &
+ iostat = input_stat )
 
-    if ( input_stat .ne. 0 ) then
-        write ( *, '(a)' ) ''
-        write ( *, '(a)' ) 'FACE_DATA_READ - Fatal error!'
-        write ( *, '(a)' ) '  Could not open input file "' &
-		 // trim ( file_name ) // '"'
-        stop 1
-    end if
-	allocate(n2f(NoRow,Nocol))
+if ( input_stat .ne. 0 ) then
+    write ( *, '(a)' ) ''
+    write ( *, '(a)' ) 'FACE_DATA_READ - Fatal error!'
+    write ( *, '(a)' ) '  Could not open input file "' &
+	 // trim ( file_name ) // '"'
+    stop 1
+end if
 
-	!read(input, '(a)', ADVANCE='NO', iostat=status1, SIZE=size1) cur_line
-	!print *, "", cur_line
-    do ii=1,NoRow
-		read(input, *) n2f(ii,:)
-		!print *, "n2f", n2f(ii,:)
-	enddo
+if (allocated(n2f)) deallocate(n2f)
+allocate(n2f(NoRow,Nocol))
+
+do ii=1,NoRow
+	read(input, *) n2f(ii,:)
+	!print *, "n2f", n2f(ii,:)
+enddo
 close (input)
 end subroutine
 

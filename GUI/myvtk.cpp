@@ -144,9 +144,9 @@ MyVTK::MyVTK(QWidget *page, QWidget *test_page, double radius, double length)
 	paused = false;
     framenum = 0;
 
-//	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
-    ren->GetActiveCamera()->SetFocalPoint(0.,0.,0.);
-    ren->GetActiveCamera()->SetPosition(0.,0.,-5*radius);
+    ren->GetActiveCamera()->SetFocalPoint(0.,0.,300.);
+    ren->GetActiveCamera()->SetPosition(0.,-3000, 0.);
+//    ren->GetActiveCamera()->SetPosition(0.,-15*radius, 0.);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -205,8 +205,8 @@ void MyVTK::get_cell_positions(bool dummy)
         cp.state = Global::TC_list[j+4];
         cp.diameter = TC_diam;
 		TCpos_list.append(cp);
-//        sprintf(msg,"cell pos: i: %d x,y,z: %d %d %d state: %d diam: %f",i,cp.x,cp.y,cp.z,cp.state,cp.diameter);
-//        LOG_MSG(msg);
+        sprintf(msg,"cell pos: i: %d x,y,z: %d %d %d state: %d diam: %f",i,cp.x,cp.y,cp.z,cp.state,cp.diameter);
+        LOG_MSG(msg);
 	}
 }
 
@@ -239,9 +239,7 @@ void MyVTK::renderCells(bool dummy)
     process_Tcells();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
-//		ren->ResetCamera();
 	}
-//    makeLines();
     iren->Render();
 	first_VTK = false;	
 }
@@ -343,54 +341,16 @@ void MyVTK::process_Tcells()
 //---------------------------------------------------------------------------------------------
 void MyVTK::getTCColor(int state, double *r, double *g, double *b)
 {
-	bool CD4;
-	int deep_blue[]   = {30,20,255};
-	int deep_green[]  = {0,150,0};
-	int light_blue[]  = {0,200,255};
-	int light_green[] = {50,255,150};
-	int purple[]      = {200,30,255};
-	int yellow[]      = {255,255,30};
-    int red[]         = {255,0,0};
+//	bool CD4;
+//	int deep_blue[]   = {30,20,255};
+//	int deep_green[]  = {0,150,0};
+//	int light_blue[]  = {0,200,255};
+//	int light_green[] = {50,255,150};
+//	int purple[]      = {200,30,255};
+//	int yellow[]      = {255,255,30};
+  int red[]         = {255,0,0};
 
     setColor(r,g,b,red);
-
-    /*
-	if (state < 100) 
-		CD4 = true;
-	else {
-		CD4 = false;
-		state -= 100;
-	}
-	if (state == -1) {	// non-cognate
-		*r = 0.5; *g = 0.5; *b = 0.5;
-	} else if (CD4){
-		if (state == 0) {			// naive
-			setColor(r,g,b,deep_blue);
-//			r = deep; g = 0; b = 1;
-		} else if (state == 99) {	// bound
-			setColor(r,g,b,purple);
-//			r = 1.0; g = 0.6; b = 0.0;
-		} else {					// activated
-			setColor(r,g,b,light_blue);
-
-//			if (state <= TC_MAX_GEN) {
-//				genfac = (state-1)/(TC_MAX_GEN-1);		// 0 - 1
-//				b = genfac*0.4;
-//				g = 1 - b;
-//				r = 0;
-//			}
-
-		}
-	} else {
-		if (state == 0) {			// naive
-			setColor(r,g,b,deep_green);
-		} else if (state == 99) {	// bound
-			setColor(r,g,b,yellow);
-		} else {					// activated
-			setColor(r,g,b,light_green);
-		}
-	}
-    */
 }
 
 //---------------------------------------------------------------------------------------------
