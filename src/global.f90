@@ -293,6 +293,7 @@ logical :: use_loosepack = .false.
 logical :: use_makeRing = .true.
 logical :: use_settling = .true.
 logical :: settling
+logical :: calibration_run = .true.
 
 logical :: dbug = .false.
 

@@ -369,12 +369,6 @@ if (mod(istep,nt_hour) == 0) then
 		call add_log_paths
 	endif
 endif
-!if (FACS_INTERVAL > 0) then
-!	if (mod(istep,FACS_INTERVAL*240) == 0) then
-!		hour = istep/240
-!		call write_FACS(hour)
-!	endif
-!endif
 if (TAGGED_LOG_PATHS .and. mod(istep,1) == 0) then
 	call update_log_paths
 endif
@@ -386,13 +380,13 @@ if (.not.ok) then
 	return
 endif
 
-!return
-call FEsolve
-call logger('Done FEsolve')
-
-call GetVel
-call logger('Done GetVel')
-
+if (.not.calibration_run) then
+	if (istep == 1) then
+		call FEsolve
+		call logger('Done FEsolve')
+	endif
+	call GetVel
+endif
 call update_all_nbrlists
 
 t_fmover = 0

@@ -56,9 +56,7 @@ integer :: ii, jj, j, I(6), signum(6), DiagSig(6,6)
 integer :: counter, Recount1, Ccounter, commonCount
 logical :: ok1
 character * ( 255 ) :: fileplace, Bmatrix_filename
-!integer, parameter :: out_unit=20
 
-write(*,*) 'sparseMatrices'
 !open (unit=out_unit,file="missed.txt",action="write",status="replace")
 !allocate(Ak(6,6))
 !Ak(1,:)= 1/(2.*6.) *(/2.,-1.,0.,0.,0.,0./)
@@ -507,7 +505,6 @@ do i = 1,size(FreeFaces)
 		endif
 	enddo
 enddo
-write(*,*) 'count1: ',count1
 
 !close(out_unit)
 !print *, "", count1
@@ -637,7 +634,8 @@ nnz = size(NewA)
 call slu_solve(4, sizeFFace, size(NewA(:)), acsc, row_ind, col_ptr, solution);
 !!UMF call solve(isolve_mode, n, Ap, Ai, Ax, b, x)
 call cpu_time(t2)
-write(*,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
+write(logmsg,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
+call logger(logmsg)
 !write(nflog,*) 'solution'
 !write(nflog,'(5e14.5)') solution
 
@@ -1145,12 +1143,12 @@ END FUNCTION FindDet
 
 !=======================================================================
 !== resid ==============================================================
-! Compute the residual, r = Ax-b, its max-norm, and print the max-norm
+! Compute the residual, r = Ax-b, its max component and norm.
 ! Note that A is zero-based.
 !=======================================================================
 subroutine resid (n, Ap, Ai, Ax, x, b, r)
 integer :: n, Ap(:), Ai(:), j, i, p
-double precision :: Ax(:), x(:), b(:), r(:), rmax, aij
+double precision :: Ax(:), x(:), b(:), r(:), rmax, rnorm, aij
 
 r(1:n) = -b(1:n)
 
@@ -1162,11 +1160,14 @@ do j = 1,n
 	enddo
 enddo
 rmax = 0
+rnorm = 0
 do i = 1, n
 	rmax = max(rmax, r(i))
+	rnorm = rnorm + r(i)*r(i)
 enddo
-
-write(*,*) 'rmax, norm (A*x-b): ', rmax, norm(r)
+rnorm = sqrt(rnorm)
+write(logmsg,'(a,2e12.3)') 'Residual (A*x-b): rmax, rnorm: ', rmax, rnorm
+call logger(logmsg)
 end subroutine
 
 end module
