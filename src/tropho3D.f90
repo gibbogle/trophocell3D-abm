@@ -386,6 +386,13 @@ if (.not.ok) then
 	return
 endif
 
+!return
+call FEsolve
+call logger('Done FEsolve')
+
+call GetVel
+call logger('Done GetVel')
+
 call update_all_nbrlists
 
 t_fmover = 0

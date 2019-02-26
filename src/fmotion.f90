@@ -351,12 +351,12 @@ integer :: cellNo
 
 !parametrisation:
 k1=0.01
-shear=0.6
-F= k1*shear*[0, 0, -1]
+!shear=0.6
+!F= k1*shear*[0, 0, -1]
 
-!F(1) = k1*(0.0002*u_cell_x(cellNo)-0.0002)
-!F(2) = k1*(0.0002*u_cell_y(cellNo)-0.0002)
-!F(3) = k1*(0.0002*u_cell_z(cellNo)-0.0002)
+F(1) = k1*(0.0002*u_cell_x(cellNo)-0.0002)
+F(2) = k1*(0.0002*u_cell_y(cellNo)-0.0002)
+F(3) = k1*(0.0002*u_cell_z(cellNo)-0.0002)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

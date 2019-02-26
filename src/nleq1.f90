@@ -1705,6 +1705,8 @@ contains
         QMIXIO = LUMON.EQ.LUSOL .AND. MPRMON.NE.0 .AND. MPRSOL.NE.0
         QLU    = .NOT. QSIMPL
         MPRTIM = IOPT(19)
+        
+        FCMON = 999	! Gib added this to prevent the runtime error of FCMON undefined
 !       ----------------------------------------------------------
 !       1.2 Derivated dimensional parameters
         IF (MSTOR.EQ.0) THEN

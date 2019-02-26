@@ -11,7 +11,7 @@ void solve(int nprocs, int m, int n, int nnz, double *a, int *asub, int *xa, dou
   xa   = colptr	(0-based)
 */
 
-void slu_solve(int *nprocs, int *n, int *nnz, double *a, int *asub, int *xa, double *rhs)
+void slu_solve(int *nprocs, int *n, int *nnz, double a[], int asub[], int xa[], double rhs[])
 {
 //	printf("call solve: nprocs,n,nnz: %d %d %d\n",*nprocs,*n,*nnz);
 	solve(*nprocs, *n, *n, *nnz, a, asub, xa, rhs);

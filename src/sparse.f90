@@ -15,8 +15,8 @@ INTERFACE
     ! appropriate for the companion C processor.
 	subroutine slu_solve(nprocs, n, nnz, a, asub, xa, rhs) bind(C)
     USE,INTRINSIC :: ISO_C_BINDING  ! Declares C kinds
-	integer(c_int) :: nprocs, n, nnz, asub(:), xa(:)
-	real(c_double) :: a(:), rhs(:)
+	integer(c_int) :: nprocs, n, nnz, asub(*), xa(*)
+	real(c_double) :: a(*), rhs(*)
 	end subroutine slu_solve
 END INTERFACE
 
@@ -58,9 +58,8 @@ logical :: ok1
 character * ( 255 ) :: fileplace, Bmatrix_filename
 !integer, parameter :: out_unit=20
 
+write(*,*) 'sparseMatrices'
 !open (unit=out_unit,file="missed.txt",action="write",status="replace")
-
-
 !allocate(Ak(6,6))
 !Ak(1,:)= 1/(2.*6.) *(/2.,-1.,0.,0.,0.,0./)
 !Ak(2,:)= 1/(2.*6.) *(/-1.,2.,0.,0.,0.,0./)
@@ -168,7 +167,6 @@ integer :: rank,i
 integer :: matrix(rank)
 real(REAL_KIND) :: diagmatrix(rank,rank)
 
-
 diagmatrix(:,:) = 0
 !print *, "zeros=", diagmatrix(:,:)
 do i = 1, rank
@@ -182,7 +180,9 @@ function findequal(IB, JB,Row,Col,ok)
 
 integer :: IB(:), JB(:), Row,Col , findequal, ii
 logical :: ok
- ok = .false.
+
+findequal = 0
+ok = .false.
 do ii=1,size(IB)
 	if (IB(ii)==Row .AND. JB(ii)==Col) then
 		findequal=ii
@@ -487,7 +487,7 @@ IF (ALLOCATED (JAMatrix)) DEALLOCATE (JAMatrix)
 	call ax_st ( size(BodyForce), size(AMatrix), IAMatrix, JAMatrix, &
 	AMatrix, Q_P, Ax ) !computes A*x, A is a sparse matrix
 	BodyForce(:) = BodyForce(:) - Ax(:)
-	!print *, "Body Force=", BodyForce(:)
+	!print *, "Body Force = ", BodyForce(:)
 	!print *, "QP=", Q_P(:)
 
 count1=0
@@ -507,14 +507,13 @@ do i = 1,size(FreeFaces)
 		endif
 	enddo
 enddo
-
+write(*,*) 'count1: ',count1
 
 !close(out_unit)
 !print *, "", count1
 !print *, "FreeFaces=", FreeFaces(1:10)
-
-	call solver(AMatrix,IAMatrix,JAMatrix,BodyForce,Q_P,&
-	FreeFaces,size(FreeFaces), count1)
+call solver(AMatrix,IAMatrix,JAMatrix,BodyForce,Q_P,&
+FreeFaces,size(FreeFaces), count1)
  !do i=1,nofaces+NofElements
 !	write(nflog,'(a,3f10.1)') "final flow=", Q_P(i)
 !enddo
@@ -534,7 +533,7 @@ real(REAL_KIND) :: solution(sizeFFace), residual(sizeFFace)
 real(REAL_KIND) :: out_vel1, DV_velocity, ave_outflow_veloc
 integer :: IA(:),JA(:), NewIA(n), NewJA(n)
 integer :: rowcount, columncount!, DV_Number(size(DCOutlet))
-integer :: isolve_mode
+integer :: isolve_mode, nnz
 real(4) :: t1, t2
 
 real(REAL_KIND) :: BForce(:), QP(:), newBForce(sizeFFace)
@@ -622,16 +621,28 @@ Ap_save = col_ptr
 Ai_save = row_ind
 Ax_save = acsc
 call cpu_time(t1)
-!!write(*,*) 'call slu_solve: n,nz: ',n,nz
+n = sizeFFace
+nnz = size(NewA)
+!write(nflog,*) 'n,nnz: ',n,nnz
+!write(nflog,*) 'col_ptr'
+!write(nflog,'(11i7)') col_ptr
+!write(nflog,*) 'row_ind'
+!write(nflog,'(11i7)') row_ind
+!write(nflog,*) 'acsc (nzvals)'
+!write(nflog,'(5e15.8)') NewA
+!write(nflog,*) 'rhs'
+!write(nflog,'(5e14.5)') solution
+
 !!write(*,*)
-call slu_solve(4, sizeFFace, size(NEWA(:)), acsc, row_ind, col_ptr, solution);
+call slu_solve(4, sizeFFace, size(NewA(:)), acsc, row_ind, col_ptr, solution);
 !!UMF call solve(isolve_mode, n, Ap, Ai, Ax, b, x)
 call cpu_time(t2)
-write(*,*)
 write(*,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
+!write(nflog,*) 'solution'
+!write(nflog,'(5e14.5)') solution
 
 !! print the residual.
-write(*,*) 'After solve, residual:'
+!write(*,*) 'After solve, residual:'
 call resid (sizeFFace, Ap_save, Ai_save, Ax_save, solution, newBForce, residual)
 !========== end slu solver=============================
 
@@ -1155,7 +1166,7 @@ do i = 1, n
 	rmax = max(rmax, r(i))
 enddo
 
-write(*,*) 'norm (A*x-b): ', rmax
+write(*,*) 'rmax, norm (A*x-b): ', rmax, norm(r)
 end subroutine
 
 end module
