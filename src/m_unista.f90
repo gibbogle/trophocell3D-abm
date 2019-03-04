@@ -567,4 +567,108 @@ e = (num_z-1)*nel_x*nel_y + (num_y-1)*nel_x + num_x;
 
 end subroutine
 
+!----------------------------------------------------------------------------
+! GB To find the element that a point falls within
+!----------------------------------------------------------------------------
+subroutine getPointElement(p,e)
+real (REAL_KIND):: p(3)
+integer :: e
+integer :: m, k
+integer :: base(6,4)
+real (REAL_KIND):: normal(6,3), dP(6)
+
+do k = 2,NofElements_z+1
+    if ( p(3)<=e_Z(k) .AND. p(3)>=e_Z(k-1) ) then
+        do m = 1, size(layered_el,2)
+            e = layered_el(k-1,m)
+            base(1,1) = Cylinder_Element(e,1)
+			base(1,2) = Cylinder_Element(e,4)
+			base(1,3) = Cylinder_Element(e,8)
+			base(1,4) = Cylinder_Element(e,5)
+            normal(1,:) = cross(&
+			(Cylinder_vertices(base(1,2),:) - Cylinder_vertices(base(1,1),:)), &
+			(Cylinder_vertices(base(1,3),:) - Cylinder_vertices(base(1,1),:)))
+            dP(1) = dot_product(normal(1,:),(p - Cylinder_vertices(base(1,1),:)))/norm(normal(1,:))
+			!*******************************************************
+			! NOTE that norm defined in global is the same as the fortran 
+			! intrinsic function NORM2, the Euclidean vector norm.
+			! NORM2 is in gfortran but not in Intel Fortran
+			!************************************************************
+
+            base(2,1) = Cylinder_Element(e,1)
+			base(2,2) = Cylinder_Element(e,5)
+			base(2,3) = Cylinder_Element(e,6)
+			base(2,4) = Cylinder_Element(e,2)
+            normal(2,:) = cross(&
+			(Cylinder_vertices(base(2,2),:) - Cylinder_vertices(base(2,1),:)), &
+			(Cylinder_vertices(base(2,3),:) - Cylinder_vertices(base(2,1),:)))
+            dP(2) = dot_product(normal(2,:),(p - Cylinder_vertices(base(2,1),:)))/norm(normal(2,:))
+
+            base(3,1) = Cylinder_Element(e,4)
+			base(3,2) = Cylinder_Element(e,3)
+			base(3,3) = Cylinder_Element(e,7)
+			base(3,4) = Cylinder_Element(e,8)
+            normal(3,:) = cross(&
+			(Cylinder_vertices(base(3,2),:) - Cylinder_vertices(base(3,1),:)), &
+			(Cylinder_vertices(base(3,3),:) - Cylinder_vertices(base(3,1),:)))
+            dP(3) = dot_product(normal(3,:),(p - Cylinder_vertices(base(3,1),:)))/norm(normal(3,:))
+
+            base(4,1) = Cylinder_Element(e,1)
+			base(4,2) = Cylinder_Element(e,2)
+			base(4,3) = Cylinder_Element(e,3)
+			base(4,4) = Cylinder_Element(e,4)
+            normal(4,:) = cross(&
+			(Cylinder_vertices(base(4,2),:) - Cylinder_vertices(base(4,1),:)), &
+			(Cylinder_vertices(base(4,3),:) - Cylinder_vertices(base(4,1),:)))
+            dP(4) = dot_product(normal(4,:),(p - Cylinder_vertices(base(4,1),:)))/norm(normal(4,:))
+
+            base(5,1) = Cylinder_Element(e,5)
+			base(5,2) = Cylinder_Element(e,8)
+			base(5,3) = Cylinder_Element(e,7)
+			base(5,4) = Cylinder_Element(e,6)
+            normal(5,:) = cross(&
+			(Cylinder_vertices(base(5,2),:) - Cylinder_vertices(base(5,1),:)), &
+			(Cylinder_vertices(base(5,3),:) - Cylinder_vertices(base(5,1),:)))
+            dP(5) = dot_product(normal(5,:),(p - Cylinder_vertices(base(5,1),:)))/norm(normal(5,:))
+
+            base(6,1) = Cylinder_Element(e,2)
+			base(6,2) = Cylinder_Element(e,6)
+			base(6,3) = Cylinder_Element(e,7)
+			base(6,4) = Cylinder_Element(e,3)
+            normal(6,:) = cross(&
+			(Cylinder_vertices(base(6,2),:) - Cylinder_vertices(base(6,1),:)), &
+			(Cylinder_vertices(base(6,3),:) - Cylinder_vertices(base(6,1),:)))
+            dP(6) = dot_product(normal(6,:),(p - Cylinder_vertices(base(6,1),:)))/norm(normal(6,:))
+
+          if (NINT(dP(1))>=0 .AND. NINT(dP(2))>=0 .AND. NINT(dP(3))>=0 &
+			.AND. NINT(dP(4))>=0 .AND. NINT(dP(5))>=0 .AND.  NINT(dP(6))>=0) then
+              return
+          endif
+        enddo
+    endif
+enddo
+
+end subroutine
+
+!----------------------------------------------------------------------------
+!----------------------------------------------------------------------------
+subroutine test_getPointElement
+real (REAL_KIND):: p(3)
+integer :: e
+integer :: k, nd
+
+write(*,*) 'Enter p (x,y,z): '
+read(*,*) p
+call getPointElement(p,e)
+write(*,*) 'element #: ',e
+write(*,'(a,8i6)') 'nodes: ',cylinder_element(e,:)
+do k = 1,8
+	nd = cylinder_element(e,k)
+	write(*,'(3f8.2)') cylinder_vertices(nd,:)
+enddo
+
+stop
+
+end subroutine
+
 end module m_unista

@@ -167,6 +167,7 @@ subroutine save_positions
 integer :: kcell, site(3)
 real(REAL_KIND) :: centre(3)
 
+write(nflog,*) 'n_cell_positions: ',n_cell_positions
 write(nflog,'(i6,$)') istep
 do kcell = 1,n_cell_positions
     centre = cell_list(kcell)%centre(:,1)
@@ -353,7 +354,6 @@ nt_hour = 3600/DELTA_T
 ok = .true.
 istep = istep + 1
 
-n_cell_positions=ncells !**************
 if (n_cell_positions > 0) then
 	call save_positions
 endif
@@ -384,6 +384,8 @@ if (.not.calibration_run) then
 	if (istep == 1) then
 		call FEsolve
 		call logger('Done FEsolve')
+!		call test_getPointVel
+!		call makeVelDist(500.d0)
 	endif
 	call GetVel
 endif
@@ -540,6 +542,7 @@ if (.not.ok) return
 
 call FEsetup
 call logger('did FEsetup')
+!call test_getPointElement
 
 nwallcells = 0
 !call make_wall

@@ -760,23 +760,14 @@ real (REAL_KIND) :: D_matrix(3,3),JJ,u_total(3)!, velocity_vec(3,1)
         !write(nflog,'(i6,$)') cell_elem(i)
 		!print *, "element=",Element(cell_elem(i),:)
 		if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
-		elem_nodes(1)=Cylinder_ELEMENT(cell_elem(i),1)
-		elem_nodes(2)=Cylinder_ELEMENT(cell_elem(i),2)
-		elem_nodes(3)=Cylinder_ELEMENT(cell_elem(i),3)
-		elem_nodes(4)=Cylinder_ELEMENT(cell_elem(i),4)
-		elem_nodes(5)=Cylinder_ELEMENT(cell_elem(i),5)
-		elem_nodes(6)=Cylinder_ELEMENT(cell_elem(i),6)
-		elem_nodes(7)=Cylinder_ELEMENT(cell_elem(i),7)
-		elem_nodes(8)=Cylinder_ELEMENT(cell_elem(i),8)
+		elem_nodes(:) = Cylinder_ELEMENT(cell_elem(i),:)
 		do j=1,8
 			elem_vertices(j,1:3)=Cylinder_vertices(elem_nodes(j),1:3)
-			!print *, "elem_nodes=",elem_nodes(j)
-			!print *, "element vertices=", elem_vertices(j,:)
 		enddo
 
-		coordPhy(1:3)=cell_list(i)%centre(1:3,1)
+		coordPhy(1:3) = cell_list(i)%centre(1:3,1)
 		call mapper(ND,Nvert,elem_vertices,coordPhy,coordref)
-		cell_in_reference(i,:)=coordref(1:3)
+		cell_in_reference(i,:) = coordref(1:3)
 	enddo
 	
 	!write(nflog,*)
@@ -966,8 +957,9 @@ do i=1, ncells
     uhat_y=(Uhat(6)-Uhat(5))*1/8+ (Uhat(5)+Uhat(6))*zhat/8
     uhat_z=(Uhat(4)-Uhat(3))*1/8+ (Uhat(3)+Uhat(4))*yhat/8
     do j=1,8
-        x_corners(j,:)=(/Cylinder_vertices((Cylinder_ELEMENT(e,j)),1),&
-        Cylinder_vertices((Cylinder_ELEMENT(e,j)),2) , Cylinder_vertices((Cylinder_ELEMENT(e,j)),3)/)
+!        x_corners(j,:)=(/Cylinder_vertices((Cylinder_ELEMENT(e,j)),1),&
+!        Cylinder_vertices((Cylinder_ELEMENT(e,j)),2) , Cylinder_vertices((Cylinder_ELEMENT(e,j)),3)/)
+		x_corners(j,:) = Cylinder_vertices(Cylinder_ELEMENT(e,j),:)
     enddo
     D_matrix(1,1)=(-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,1)+ &
 			(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,1)+ &
@@ -1064,7 +1056,9 @@ do i=1, ncells
     !else
     !    write(nflog,'(a,i6)' ) 'element number ', e
     !endif
-
+	if (i == 18) then
+		write(nflog,'(i3,i6,5f8.2,e12.3)') i, cell_elem(i),xhat,yhat,zhat,u_cell_x(i),u_cell_y(i),u_cell_z(i)
+	endif
 enddo
 
 end subroutine
@@ -1168,6 +1162,189 @@ enddo
 rnorm = sqrt(rnorm)
 write(logmsg,'(a,2e12.3)') 'Residual (A*x-b): rmax, rnorm: ', rmax, rnorm
 call logger(logmsg)
+end subroutine
+
+
+!-----------------------------------------------
+! GB to check velocity distribution
+!-----------------------------------------------
+subroutine getPointVel(p,v)
+real (REAL_KIND) :: p(3), v(3)
+real (REAL_KIND) :: elem_vertices(8,3), fsum(3)
+integer, allocatable :: cell_elem(:)
+real (REAL_KIND) :: cell_in_reference(3)
+real (REAL_KIND) :: coordPhy(3), coordref(3)
+integer :: elem_nodes(8), j, k, e, II(6), signum(6), ND, Nvert
+real (REAL_KIND) :: xhat, yhat, zhat, Uhat(6)
+real (REAL_KIND) :: uhat_x, uhat_y, uhat_z, x_corners(8,3)
+real (REAL_KIND) :: D_matrix(3,3),JJ,u_total(3)
+
+! transfer cell position from physical to the reference elements:
+call getPointElement(p,e)
+ND = 3
+Nvert = 8
+elem_nodes(:) = Cylinder_ELEMENT(e,:)
+elem_vertices(:,1:3) = Cylinder_vertices(elem_nodes(:),1:3)
+coordPhy(:) = p
+call mapper(ND,Nvert,elem_vertices,coordPhy,coordref)
+cell_in_reference(:) = coordref(:)
+
+xhat = cell_in_reference(1)
+yhat = cell_in_reference(2)
+zhat = cell_in_reference(3)
+II(:) = ElToFace(e,:)
+signum=(/1,1,1,1,1,1/)
+do k = 1,6
+	if (e == AllSurfs(II(k),6)) then
+		signum(k) = -1 ! -1 if edge is on T-
+	endif
+enddo
+do j = 1,6
+    Uhat(j) = Q_P(ElToFace(e,j))*signum(j)
+enddo
+uhat_x = (Uhat(1)-Uhat(2))*1/8+(Uhat(1)+Uhat(2))*xhat/8
+uhat_y = (Uhat(6)-Uhat(5))*1/8+ (Uhat(5)+Uhat(6))*zhat/8
+uhat_z = (Uhat(4)-Uhat(3))*1/8+ (Uhat(3)+Uhat(4))*yhat/8
+do j = 1,8
+	x_corners(j,:) = Cylinder_vertices(Cylinder_ELEMENT(e,j),:)
+enddo
+D_matrix(1,1) = (-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+		(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+		(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+		(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+		(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+		(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+		(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+		(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,1)
+D_matrix(1,2) = (1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,1)+ &
+        (1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,1)+ &
+		(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,1)+ &
+		(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,1)+ &
+		(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,1)+ &
+		(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,1)+ &
+		(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,1)+ &
+		(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,1)
+D_matrix(1,3) = (1-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,1)+ &
+		(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,1)+ &
+		(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,1)+ &
+		(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,1)+ &
+		(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,1)+ &
+		(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,1)+ &
+		(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,1)+ &
+		(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,1)
+D_matrix(2,1) = (-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,2)+&
+		(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+		(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+		(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+		(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,2)+ &
+		(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,2)+ &
+		(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+		(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,2)
+D_matrix(2,2) = (1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,2)+ &
+		(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,2)+ &
+		(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,2)+ &
+		(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,2)+ &
+		(1.-xhat)*(-1.)*(1+zhat)/(8.)*x_corners(5,2)+ &
+		(1.+xhat)*(-1.)*(1+zhat)/(8.)*x_corners(6,2)+ &
+		(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,2)+ &
+		(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,2)
+D_matrix(2,3) = (1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,2)+ &
+		(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,2)+ &
+		(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,2)+ &
+		(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,2)+ &
+		(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,2)+ &
+		(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,2)+ &
+		(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,2)+ &
+		(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,2)
+D_matrix(3,1) = (-1.)*(1.-yhat)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+		(1.-yhat)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+		(1.+yhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+		(-1.)*(1.+yhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+		(-1.)*(1.-yhat)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+		(1.-yhat)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+		(1.+yhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+		(-1.)*(1.+yhat)*(1.+zhat)/(8.)*x_corners(8,3)
+D_matrix(3,2) = (1.-xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(1,3)+ &
+		(1.+xhat)*(-1.)*(1.-zhat)/(8.)*x_corners(2,3)+ &
+		(1.+xhat)*(1.-zhat)/(8.)*x_corners(3,3)+ &
+		(1.-xhat)*(1.-zhat)/(8.)*x_corners(4,3)+ &
+		(1.-xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(5,3)+ &
+		(1.+xhat)*(-1.)*(1.+zhat)/(8.)*x_corners(6,3)+ &
+		(1.+xhat)*(1.+zhat)/(8.)*x_corners(7,3)+ &
+		(1.-xhat)*(1.+zhat)/(8.)*x_corners(8,3)
+D_matrix(3,3) = (1.-xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(1,3)+ &
+		(1.+xhat)*(1.-yhat)*(-1.)/(8.)*x_corners(2,3)+ &
+		(1.+xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(3,3)+ &
+		(1.-xhat)*(1.+yhat)*(-1.)/(8.)*x_corners(4,3)+ &
+		(1.-xhat)*(1.-yhat)*(1.)/(8.)*x_corners(5,3)+ &
+		(1.+xhat)*(1.-yhat)*(1.)/(8.)*x_corners(6,3)+ &
+		(1.+xhat)*(1.+yhat)*(1.)/(8.)*x_corners(7,3)+ &
+		(1.-xhat)*(1.+yhat)*(1.)/(8.)*x_corners(8,3)
+
+u_total = matmul(D_matrix, [uhat_x, uhat_y, uhat_z])
+JJ = FindDet(D_matrix,3)
+u_total = (1/JJ)*u_total
+v = u_total
+
+end subroutine
+
+!---------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------
+subroutine test_getPointVel
+real(REAL_KIND) :: p(3), v(3)
+
+do
+	write(*,*) 'Enter p (x,y,z):'
+	read(*,*) p
+	if (p(3) == 0) stop
+	call getPointVel(p,v)
+	write(*,'(a,3e12.3)') 'Vel: ',v
+enddo
+end subroutine
+
+!---------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------
+subroutine makeVelDist(z) 
+real(REAL_KIND) :: z
+
+real(REAL_KIND) :: x, y, r, p(3), delta
+real(REAL_KIND), allocatable :: v(:,:,:)
+integer :: ix, iy, i
+
+delta = 0.5
+allocate(v(-200:200,-200:200,3))
+do ix = -200,200
+	write(*,*) 'ix: ',ix
+	do iy = -200,200
+		x = ix
+		y = iy
+		r = sqrt(x*x + y*y)
+		if (r > 200 - delta) then
+			v(ix,iy,:) = 0
+		else
+			p = [x, y, z]
+			call getPointVel(p,v(ix,iy,:))
+		endif
+	enddo
+enddo
+open(nfvel,file='velocity.dat',status='replace')
+write(nfvel,'(a,f8.1)') 'z = ',z
+do i = 1,3
+	if (i == 1) then
+		write(nfvel,*) 'v_x'
+	elseif (i == 2) then
+		write(nfvel,*) 'v_y'
+	elseif (i == 3) then
+		write(nfvel,*) 'v_z'
+	endif
+	do ix = -200,200
+		write(nfvel,'(401f9.1)') v(ix,:,i)
+	enddo
+enddo
+close(nfvel)
+deallocate(v)
+stop
+			
 end subroutine
 
 end module

@@ -349,11 +349,11 @@ integer :: cellNo
 !vmax = tube_radius**2/(4*mu) * Delta_P/tube_length
 !v = vmax*(1-(r/tube_radius)**2) *[0, 0, -1]!cos((r/tube_radius)*(PI/2))*[0, 0, -1]
 
-k1 = -0.01
+k1 = 0.01
 if (calibration_run) then
 	!parametrisation:
 	shear = 0.6
-	F = k1*shear*[0, 0, 1]
+	F = k1*shear*[0, 0, -1]
 else
 	F(1) = k1*(0.0002*u_cell_x(cellNo)-0.0002)
 	F(2) = k1*(0.0002*u_cell_y(cellNo)-0.0002)

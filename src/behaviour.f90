@@ -407,6 +407,8 @@ elseif (use_loosepack) then
 elseif (use_makeRing) then
 	nxx = tube_radius/(2*cell_radius) + 1
 	nzz = INT(dz/(2*cell_radius) )+ 2 !+1
+	write(nflog,'(a,2f6.1)') 'use_makering: tube_radius, cell_radius: ',tube_radius,cell_radius
+	write(nflog,*) 'kcell,ix,iy,iz,rsite,r'
 	do ix = -nxx,nxx
 		do iy = -nxx,nxx
             x = ix*2*cell_radius	! (x,y,z) is the offset from the centre of the plug
@@ -420,7 +422,7 @@ elseif (use_makeRing) then
 				if (r < tube_radius - h) cycle
 				kcell = kcell + 1
 				rsite = [x, y, z0+z]
-				!write(nflog,'(i6,3i4,3f8.1)') kcell,ix,iy,iz,rsite
+				write(nflog,'(i6,3i4,4f8.1)') kcell,ix,iy,iz,rsite,r
 				gen = 1
 				region = 0	! don't know about regions yet
 				ctype = TROPHO_CELL

@@ -12,7 +12,7 @@ implicit none
 
 ! Files
 integer, parameter :: nfinput=1, nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nftraffic = 16, nfrun = 17, &
-					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nffacs = 24, nflog2=26
+					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nffacs = 24, nflog2=26, nfvel=27
 
 ! General parameters
 integer, parameter :: BIG_INT = 2**30
@@ -293,7 +293,7 @@ logical :: use_loosepack = .false.
 logical :: use_makeRing = .true.
 logical :: use_settling = .true.
 logical :: settling
-logical :: calibration_run = .true.
+logical :: calibration_run = .false.
 
 logical :: dbug = .false.
 
