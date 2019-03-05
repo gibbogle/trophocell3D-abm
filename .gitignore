@@ -2,9 +2,10 @@ build
 CMakeFiles
 execution
 tropho3D_GUI-build
-/cyg-build-cb/obj/**/*
-/cyg-build-cb/.objs/**/*
-/cyg-build-cb/release/**/*
+build-cb/**/*
+cyg-build-cb/obj/**/*
+cyg-build-cb/.objs/**/*
+cyg-build-cb/release/**/*
 
 
 
