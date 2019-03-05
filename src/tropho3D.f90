@@ -1,4 +1,4 @@
-! Implementing a list of cells: 
+! Implementing a list of cells:
 ! In this version the cells in the domain are stored in a list, while the
 ! occupancy array holds the indices of cells in the list.  When a cell
 ! leaves the domain or dies a gap is created in the list.
@@ -349,6 +349,11 @@ if (Ncells == 0) then
 	res = 1
 	return
 endif
+if (nocells) then
+	nlist = 0
+	ncells = 0
+endif
+
 dbug = .false.
 nt_hour = 3600/DELTA_T
 ok = .true.
@@ -385,7 +390,7 @@ if (.not.calibration_run) then
 		call FEsolve
 		call logger('Done FEsolve')
 !		call test_getPointVel
-!		call makeVelDist(500.d0)
+		call makeVelDist(500.d0)
 	endif
 	call GetVel
 endif

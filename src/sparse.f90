@@ -372,6 +372,7 @@ do i=1,EPm%nel
         cellcount_onedge_elem(i)/3.*Pi*cell_radius**3+ & !if elements are on an edge then they are shared between 4 elements
         cellcount_oncorner_elem(i)*4./(8.*3.)*Pi*cell_radius**3)&
 		/(EPm%volume*EPm%vol_fraction(i)) !corner elements are shared between 8 elements, corner edge by 4
+	if (nocells) vol_ratio(i) = 0
 
 	if (vol_ratio(i)==0.0D+00) then
        k_conduct(i) = k_empty
@@ -1311,7 +1312,7 @@ real(REAL_KIND) :: x, y, r, p(3), delta
 real(REAL_KIND), allocatable :: v(:,:,:)
 integer :: ix, iy, i
 
-delta = 0.5
+delta = 1.0
 allocate(v(-200:200,-200:200,3))
 do ix = -200,200
 	write(*,*) 'ix: ',ix

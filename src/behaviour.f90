@@ -314,7 +314,7 @@ if (use_packing .or. use_makeRing) then
     plug_centre = [0.d0, 0.d0, z0]
     cell_radius = Raverage
     kcell = 0
-else!if (use_loosepack) then
+else	!if (use_loosepack) then
     !these setting are needed for running the part consistent with MATLAB
     kcell = 0
     cell_radius = Raverage
