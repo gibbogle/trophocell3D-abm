@@ -12,6 +12,8 @@ real(8) :: xglobal(3)
 contains
 
 !---------------------------------------------------------------------------
+! Determine the local (reference) coords x(:) for a point xg(:) in a hex
+! element with vertices vert(:,:)
 !---------------------------------------------------------------------------
 subroutine mapper(ND,Nvert,vert,xg,x)
 integer :: ND, Nvert
@@ -31,7 +33,10 @@ CALL NLEQ1E(FCN,dummyjac,Ndim,x,rtol,ierr)
 end subroutine
 
 !---------------------------------------------------------------------------
-! To find local coords (r,s,t) for global point P(x,y,z) in a wedge element
+! This function is used by nleq1e to solve the set of nonlinear equations
+! given by eqtn 21 in Matringe(2007).  In the case of a hex element there are
+! 8 simultaneous equations, and F(1:8) holds the deviation from 0 for each
+! equation.
 !---------------------------------------------------------------------------
 subroutine FCN(N,X,F,IFAIL)
 integer :: N, IFAIL

@@ -1,6 +1,7 @@
 Module m_unista
 
 use global
+use FEmapper
 
 implicit none
 
@@ -15,23 +16,31 @@ integer :: cell_elem(:)
 integer :: base(6,4)
 real (REAL_KIND):: vertices(:,:),elZ(:)
 real (REAL_KIND):: normal(6,3),dP(6)
+! GB added
+real(REAL_KIND) :: p(3)
 
-do i=1,N_Cell
+do i = 1,N_Cell
 	if (cell_list(i)%state == GONE_BACK .or. cell_list(i)%state == GONE_THROUGH) cycle
-    do k=2,nel_z+1
-        if ( cell_list(i)%centre(3,1)<=elZ(k) .AND. &
+	p = cell_list(i)%centre(:,1)
+	call getPointElement(p,e)
+	cell_elem(i) = e
+enddo
+
+#if 0
+    do k = 2,nel_z+1
+        if (cell_list(i)%centre(3,1)<=elZ(k) .AND. &
 			cell_list(i)%centre(3,1)>=elZ(k-1) ) then
 			!print *, "!!", el(k-1,:)
-            do m=1, size(el,2)
-                e=el(k-1,m)
-                base(1,1) = Element(e,1)
+            do m = 1, size(el,2)
+                e = el(k-1,m)               	
+				base(1,1) = Element(e,1)
 				base(1,2) = Element(e,4)
 				base(1,3) = Element(e,8)
 				base(1,4) = Element(e,5)
-                normal(1,:) = cross(&
+				normal(1,:) = cross(&
 				(vertices(base(1,2),:)-vertices(base(1,1),:)), &
 				(vertices(base(1,3),:)-vertices(base(1,1),:)))
-                dP(1) = dot_product(normal(1,:),(cell_list(i)%centre(:,1) &
+				dP(1) = dot_product(normal(1,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(1,1),:)))/norm(normal(1,:))
 				!*******************************************************
 				! NOTE that norm defined in global is the same as the fortran 
@@ -39,54 +48,54 @@ do i=1,N_Cell
 				! NORM2 is in gfortran but not in Intel Fortran
 				!************************************************************
 
-                base(2,1) = Element(e,1)
+				base(2,1) = Element(e,1)
 				base(2,2) = Element(e,5)
 				base(2,3) = Element(e,6)
 				base(2,4) = Element(e,2)
-                normal(2,:) = cross(&
+				normal(2,:) = cross(&
 				(vertices(base(2,2),:)-vertices(base(2,1),:)), &
 				(vertices(base(2,3),:)-vertices(base(2,1),:)))
-                dP(2) = dot_product(normal(2,:),(cell_list(i)%centre(:,1) &
+				dP(2) = dot_product(normal(2,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(2,1),:)))/norm(normal(2,:))
 
-                base(3,1) = Element(e,4)
+				base(3,1) = Element(e,4)
 				base(3,2) = Element(e,3)
 				base(3,3) = Element(e,7)
 				base(3,4) = Element(e,8)
-                normal(3,:) = cross(&
+				normal(3,:) = cross(&
 				(vertices(base(3,2),:)-vertices(base(3,1),:)), &
 				(vertices(base(3,3),:)-vertices(base(3,1),:)))
-                dP(3) = dot_product(normal(3,:),(cell_list(i)%centre(:,1) &
+				dP(3) = dot_product(normal(3,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(3,1),:)))/norm(normal(3,:))
 
-                base(4,1) = Element(e,1)
+				base(4,1) = Element(e,1)
 				base(4,2) = Element(e,2)
 				base(4,3) = Element(e,3)
 				base(4,4) = Element(e,4)
-                normal(4,:) = cross(&
+				normal(4,:) = cross(&
 				(vertices(base(4,2),:)-vertices(base(4,1),:)), &
 				(vertices(base(4,3),:)-vertices(base(4,1),:)))
-                dP(4) = dot_product(normal(4,:),(cell_list(i)%centre(:,1) &
+				dP(4) = dot_product(normal(4,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(4,1),:)))/norm(normal(4,:))
 
-                base(5,1) = Element(e,5)
+				base(5,1) = Element(e,5)
 				base(5,2) = Element(e,8)
 				base(5,3) = Element(e,7)
 				base(5,4) = Element(e,6)
-                normal(5,:) = cross(&
+				normal(5,:) = cross(&
 				(vertices(base(5,2),:)-vertices(base(5,1),:)), &
 				(vertices(base(5,3),:)-vertices(base(5,1),:)))
-                dP(5) = dot_product(normal(5,:),(cell_list(i)%centre(:,1) &
+				dP(5) = dot_product(normal(5,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(5,1),:)))/norm(normal(5,:))
 
-                base(6,1) = Element(e,2)
+				base(6,1) = Element(e,2)
 				base(6,2) = Element(e,6)
 				base(6,3) = Element(e,7)
 				base(6,4) = Element(e,3)
-                normal(6,:) = cross(&
+				normal(6,:) = cross(&
 				(vertices(base(6,2),:)-vertices(base(6,1),:)), &
 				(vertices(base(6,3),:)-vertices(base(6,1),:)))
-                dP(6) = dot_product(normal(6,:),(cell_list(i)%centre(:,1) &
+				dP(6) = dot_product(normal(6,:),(cell_list(i)%centre(:,1) &
 				-vertices(base(6,1),:)))/norm(normal(6,:))
 
 				!if ((i==1 .or. i==2) .and. (e==101)) then
@@ -98,15 +107,15 @@ do i=1,N_Cell
 				!	print *, "!!", dp(1),dp(2),dp(3),dp(4),dp(5),dp(6)
 				!endif
 
-              if (NINT(dP(1))>=0 .AND. NINT(dP(2))>=0 .AND. NINT(dP(3))>=0 &
+				if (NINT(dP(1))>=0 .AND. NINT(dP(2))>=0 .AND. NINT(dP(3))>=0 &
 				.AND. NINT(dP(4))>=0 .AND. NINT(dP(5))>=0 .AND.  NINT(dP(6))>=0) then
-                  cell_elem(i)=e
-              endif
+					cell_elem(i)=e
+				endif
             enddo
         endif
     enddo
 enddo
-
+#endif
 end subroutine
 
 !----------------------------------------------
@@ -251,25 +260,24 @@ real (REAL_KIND) :: sum_PyVol,Pyramids_volume
 integer :: sizeCell,i,j,k,e
 integer :: EPmIEN(:,:)
 integer, allocatable :: countedCells(:)
-integer, allocatable :: base(:,:)
-real (REAL_KIND), allocatable :: normal(:,:)
-real (REAL_KIND), allocatable :: dP(:)
-real (REAL_KIND), allocatable :: face_area(:)
+integer :: base(6,4)
+real (REAL_KIND) :: normal(6,3)
+real (REAL_KIND) :: dP(6)
+real (REAL_KIND) :: face_area(6)
 
 IF (ALLOCATED (countedCells)) DEALLOCATE (countedCells)
 allocate(countedCells(EPm%nel))
 countedCells(:) = 0
-IF (ALLOCATED (base)) DEALLOCATE (base)
-allocate(base(6,4))
-IF (ALLOCATED (normal)) DEALLOCATE (normal)
-allocate(normal(6,3))
-IF (ALLOCATED (dP)) DEALLOCATE (dP)
-allocate(dP(6))
-IF (ALLOCATED (face_area)) DEALLOCATE (face_area)
-allocate(face_area(6))
+!IF (ALLOCATED (base)) DEALLOCATE (base)
+!allocate(base(6,4))
+!IF (ALLOCATED (normal)) DEALLOCATE (normal)
+!allocate(normal(6,3))
+!IF (ALLOCATED (dP)) DEALLOCATE (dP)
+!allocate(dP(6))
+!IF (ALLOCATED (face_area)) DEALLOCATE (face_area)
+!allocate(face_area(6))
 
 do i=1,sizeCell
-!i=1
 	do k=1,EPm%nel_z
 		if (Cell(i,3)<=k*EPm%z_width .AND. Cell(i,3)>=(k-1)*EPm%z_width) then
 			do e=(k-1)*EPm%nel_x*Epm%nel_y+1 , (k)*EPm%nel_x*EPm%nel_y
@@ -568,86 +576,154 @@ e = (num_z-1)*nel_x*nel_y + (num_y-1)*nel_x + num_x;
 end subroutine
 
 !----------------------------------------------------------------------------
-! GB To find the element that a point falls within
+! GB To find the element that a point falls within.
 !----------------------------------------------------------------------------
 subroutine getPointElement(p,e)
 real (REAL_KIND):: p(3)
 integer :: e
-integer :: m, k
+integer :: m, k, i, j
 integer :: base(6,4)
 real (REAL_KIND):: normal(6,3), dP(6)
+integer :: node(8), nd
+real(REAL_KIND) :: vert(8,3), cmin(3), cmax(3), ref(3)
+logical :: use_ref = .true.
 
+!write(*,*) 'NofElements_z, size(layered_el,2): ',NofElements_z,size(layered_el,2)
+!write(*,'(5f10.3)') e_Z
 do k = 2,NofElements_z+1
+!	write(*,*) 'k,p(3),e_Z(k-1),e_Z(k): ',k,p(3),e_Z(k-1),e_Z(k)
     if ( p(3)<=e_Z(k) .AND. p(3)>=e_Z(k-1) ) then
         do m = 1, size(layered_el,2)
             e = layered_el(k-1,m)
-            base(1,1) = Cylinder_Element(e,1)
-			base(1,2) = Cylinder_Element(e,4)
-			base(1,3) = Cylinder_Element(e,8)
-			base(1,4) = Cylinder_Element(e,5)
-            normal(1,:) = cross(&
-			(Cylinder_vertices(base(1,2),:) - Cylinder_vertices(base(1,1),:)), &
-			(Cylinder_vertices(base(1,3),:) - Cylinder_vertices(base(1,1),:)))
-            dP(1) = dot_product(normal(1,:),(p - Cylinder_vertices(base(1,1),:)))/norm(normal(1,:))
-			!*******************************************************
-			! NOTE that norm defined in global is the same as the fortran 
-			! intrinsic function NORM2, the Euclidean vector norm.
-			! NORM2 is in gfortran but not in Intel Fortran
-			!************************************************************
+            
+            ! Determine whether element e can even be a candidate
+            cmin = 1.0e10
+            cmax = -1.0e10
+            node = Cylinder_element(e,:)
+            do i = 1,8
+				nd = node(i)
+				vert(i,:) = Cylinder_vertices(nd,:)
+!				write(nflog,'(2i6,3f10.3)') i,nd,vert(i,:)
+				do j = 1,3
+					cmin(j) = min(cmin(j),vert(i,j))
+					cmax(j) = max(cmax(j),vert(i,j))
+				enddo
+			enddo
+!            write(nflog,'(a,2i6,3x,3f8.2,3x,3f8.2)') 'm,e,cmin,cmax: ',m,e,cmin,cmax
+			if (cmin(1) > p(1) .or. cmax(1) < p(1)) cycle
+			if (cmin(2) > p(2) .or. cmax(2) < p(2)) cycle
+			if (cmin(3) > p(3) .or. cmax(3) < p(3)) cycle
+!			write(*,*) 'Candidate element: ',e
+!			write(nflog,*) 'Candidate element: ',e
 
-            base(2,1) = Cylinder_Element(e,1)
-			base(2,2) = Cylinder_Element(e,5)
-			base(2,3) = Cylinder_Element(e,6)
-			base(2,4) = Cylinder_Element(e,2)
-            normal(2,:) = cross(&
-			(Cylinder_vertices(base(2,2),:) - Cylinder_vertices(base(2,1),:)), &
-			(Cylinder_vertices(base(2,3),:) - Cylinder_vertices(base(2,1),:)))
-            dP(2) = dot_product(normal(2,:),(p - Cylinder_vertices(base(2,1),:)))/norm(normal(2,:))
+			if (use_ref) then
+				call mapper(3,8,vert,p,ref)
+!				write(nflog,'(a,3e15.6)') 'ref: ',ref
+				if (ref(1) >= -1 .and. ref(1) <= 1 .and. ref(2) >= -1 .and. ref(2) <= 1 .and. ref(3) >= -1 .and. ref(3) <= 1) then
+					return
+				endif
+            else
+				base(1,1) = Cylinder_Element(e,1)
+				base(1,2) = Cylinder_Element(e,4)
+				base(1,3) = Cylinder_Element(e,8)
+				base(1,4) = Cylinder_Element(e,5)
+				normal(1,:) = cross(&
+				(Cylinder_vertices(base(1,2),:) - Cylinder_vertices(base(1,1),:)), &
+				(Cylinder_vertices(base(1,3),:) - Cylinder_vertices(base(1,1),:)))
+				dP(1) = dot_product(normal(1,:),(p - Cylinder_vertices(base(1,1),:)))/norm(normal(1,:))
+				!*******************************************************
+				! NOTE that norm defined in global is the same as the fortran 
+				! intrinsic function NORM2, the Euclidean vector norm.
+				! NORM2 is in gfortran but not in Intel Fortran
+				!************************************************************
 
-            base(3,1) = Cylinder_Element(e,4)
-			base(3,2) = Cylinder_Element(e,3)
-			base(3,3) = Cylinder_Element(e,7)
-			base(3,4) = Cylinder_Element(e,8)
-            normal(3,:) = cross(&
-			(Cylinder_vertices(base(3,2),:) - Cylinder_vertices(base(3,1),:)), &
-			(Cylinder_vertices(base(3,3),:) - Cylinder_vertices(base(3,1),:)))
-            dP(3) = dot_product(normal(3,:),(p - Cylinder_vertices(base(3,1),:)))/norm(normal(3,:))
+				base(2,1) = Cylinder_Element(e,1)
+				base(2,2) = Cylinder_Element(e,5)
+				base(2,3) = Cylinder_Element(e,6)
+				base(2,4) = Cylinder_Element(e,2)
+				normal(2,:) = cross(&
+				(Cylinder_vertices(base(2,2),:) - Cylinder_vertices(base(2,1),:)), &
+				(Cylinder_vertices(base(2,3),:) - Cylinder_vertices(base(2,1),:)))
+				dP(2) = dot_product(normal(2,:),(p - Cylinder_vertices(base(2,1),:)))/norm(normal(2,:))
 
-            base(4,1) = Cylinder_Element(e,1)
-			base(4,2) = Cylinder_Element(e,2)
-			base(4,3) = Cylinder_Element(e,3)
-			base(4,4) = Cylinder_Element(e,4)
-            normal(4,:) = cross(&
-			(Cylinder_vertices(base(4,2),:) - Cylinder_vertices(base(4,1),:)), &
-			(Cylinder_vertices(base(4,3),:) - Cylinder_vertices(base(4,1),:)))
-            dP(4) = dot_product(normal(4,:),(p - Cylinder_vertices(base(4,1),:)))/norm(normal(4,:))
+				base(3,1) = Cylinder_Element(e,4)
+				base(3,2) = Cylinder_Element(e,3)
+				base(3,3) = Cylinder_Element(e,7)
+				base(3,4) = Cylinder_Element(e,8)
+				normal(3,:) = cross(&
+				(Cylinder_vertices(base(3,2),:) - Cylinder_vertices(base(3,1),:)), &
+				(Cylinder_vertices(base(3,3),:) - Cylinder_vertices(base(3,1),:)))
+				dP(3) = dot_product(normal(3,:),(p - Cylinder_vertices(base(3,1),:)))/norm(normal(3,:))
 
-            base(5,1) = Cylinder_Element(e,5)
-			base(5,2) = Cylinder_Element(e,8)
-			base(5,3) = Cylinder_Element(e,7)
-			base(5,4) = Cylinder_Element(e,6)
-            normal(5,:) = cross(&
-			(Cylinder_vertices(base(5,2),:) - Cylinder_vertices(base(5,1),:)), &
-			(Cylinder_vertices(base(5,3),:) - Cylinder_vertices(base(5,1),:)))
-            dP(5) = dot_product(normal(5,:),(p - Cylinder_vertices(base(5,1),:)))/norm(normal(5,:))
+				base(4,1) = Cylinder_Element(e,1)
+				base(4,2) = Cylinder_Element(e,2)
+				base(4,3) = Cylinder_Element(e,3)
+				base(4,4) = Cylinder_Element(e,4)
+				normal(4,:) = cross(&
+				(Cylinder_vertices(base(4,2),:) - Cylinder_vertices(base(4,1),:)), &
+				(Cylinder_vertices(base(4,3),:) - Cylinder_vertices(base(4,1),:)))
+				dP(4) = dot_product(normal(4,:),(p - Cylinder_vertices(base(4,1),:)))/norm(normal(4,:))
 
-            base(6,1) = Cylinder_Element(e,2)
-			base(6,2) = Cylinder_Element(e,6)
-			base(6,3) = Cylinder_Element(e,7)
-			base(6,4) = Cylinder_Element(e,3)
-            normal(6,:) = cross(&
-			(Cylinder_vertices(base(6,2),:) - Cylinder_vertices(base(6,1),:)), &
-			(Cylinder_vertices(base(6,3),:) - Cylinder_vertices(base(6,1),:)))
-            dP(6) = dot_product(normal(6,:),(p - Cylinder_vertices(base(6,1),:)))/norm(normal(6,:))
+				base(5,1) = Cylinder_Element(e,5)
+				base(5,2) = Cylinder_Element(e,8)
+				base(5,3) = Cylinder_Element(e,7)
+				base(5,4) = Cylinder_Element(e,6)
+				normal(5,:) = cross(&
+				(Cylinder_vertices(base(5,2),:) - Cylinder_vertices(base(5,1),:)), &
+				(Cylinder_vertices(base(5,3),:) - Cylinder_vertices(base(5,1),:)))
+				dP(5) = dot_product(normal(5,:),(p - Cylinder_vertices(base(5,1),:)))/norm(normal(5,:))
 
-          if (NINT(dP(1))>=0 .AND. NINT(dP(2))>=0 .AND. NINT(dP(3))>=0 &
-			.AND. NINT(dP(4))>=0 .AND. NINT(dP(5))>=0 .AND.  NINT(dP(6))>=0) then
-              return
-          endif
+				base(6,1) = Cylinder_Element(e,2)
+				base(6,2) = Cylinder_Element(e,6)
+				base(6,3) = Cylinder_Element(e,7)
+				base(6,4) = Cylinder_Element(e,3)
+				normal(6,:) = cross(&
+				(Cylinder_vertices(base(6,2),:) - Cylinder_vertices(base(6,1),:)), &
+				(Cylinder_vertices(base(6,3),:) - Cylinder_vertices(base(6,1),:)))
+				dP(6) = dot_product(normal(6,:),(p - Cylinder_vertices(base(6,1),:)))/norm(normal(6,:))
+	            
+!				write(nflog,'(a,6e12.3)') 'dP: ',dP
+
+				if (NINT(dP(1))>=0 .AND. NINT(dP(2))>=0 .AND. NINT(dP(3))>=0 &
+				.AND. NINT(dP(4))>=0 .AND. NINT(dP(5))>=0 .AND.  NINT(dP(6))>=0) then
+				  return
+				endif
+!				if (dP(1)>=0 .AND. dP(2)>=0 .AND. dP(3)>=0 &
+!				.AND. dP(4)>=0 .AND. dP(5)>=0 .AND.  dP(6)>=0) then
+!				  return
+!				endif
+			endif
         enddo
     endif
 enddo
+e = 0	! No element found - this is an error!
+!if (p(1) > -150 .and. p(1) < 150 .and. p(2) > -150 .and. p(2) < 150) then
+!	write(*,'(a,3f8.2)') 'No element found for: ',p
+!	stop
+!endif
 
+end subroutine
+
+!----------------------------------------------------------------------------
+!----------------------------------------------------------------------------
+subroutine makeLayerLists
+integer :: e, i, k ,n(9), node(8), nel_z, nel
+real(REAL_KIND) :: ave, deltaz
+
+nel = 4500
+nel_z = 9
+deltaz = 1000./nel_z
+do i = 1,10
+	e_Z(i) = (i-1)*deltaz
+enddo
+n = 0
+do e = 1,nel
+    node = Cylinder_element(e,:)
+	ave = (Cylinder_vertices(node(1),3) + Cylinder_vertices(node(5),3))/2
+	k = ave/deltaz + 1
+	n(k) = n(k) + 1
+	layered_el(k,n(k)) = e
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------

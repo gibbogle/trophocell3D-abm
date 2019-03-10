@@ -2573,7 +2573,7 @@ contains
         IF(IERR.EQ.3.AND.MPRERR.GE.1)THEN
 92301     FORMAT(/,' Damping factor has become too ', &
           'small: lambda =',D10.3,2X,/)
-          WRITE(LUERR,92301)FC
+          WRITE(LUERR,92301)FC          
         ENDIF
 !WEI
 !       ----------------------------------------------------------

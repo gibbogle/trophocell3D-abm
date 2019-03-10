@@ -294,7 +294,7 @@ logical :: use_makeRing = .true.
 logical :: use_settling = .true.
 logical :: settling
 logical :: calibration_run = .false.
-logical :: nocells = .true.
+logical :: nocells = .false.
 
 logical :: dbug = .false.
 

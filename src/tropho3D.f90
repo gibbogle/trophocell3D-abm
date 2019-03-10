@@ -341,8 +341,6 @@ integer :: hour, nit, nt_hour, kpar=0
 real(REAL_KIND) :: tnow, dt
 logical :: ok, done, changed
 
-
-
 res = 0
 if (Ncells == 0) then
 	call logger('Cells all gone')
@@ -350,6 +348,8 @@ if (Ncells == 0) then
 	return
 endif
 if (nocells) then
+	write(*,*) 'SIMULATING NOCELLS CASE TO TEST VELOCITY FIELD GENERATION!!!'
+	write(nflog,*) 'SIMULATING NOCELLS CASE TO TEST VELOCITY FIELD GENERATION!!!'
 	nlist = 0
 	ncells = 0
 endif
@@ -386,12 +386,10 @@ if (.not.ok) then
 endif
 
 if (.not.calibration_run) then
-	if (istep == 1) then
-		call FEsolve
-		call logger('Done FEsolve')
-!		call test_getPointVel
-		call makeVelDist(500.d0)
-	endif
+	call FEsolve
+	call logger('Done FEsolve')
+!	call test_getPointVel
+!	call makeVelDist(500.d0)
 	call GetVel
 endif
 call update_all_nbrlists

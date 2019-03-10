@@ -729,7 +729,7 @@ end subroutine solver
 
     return
  end subroutine rearrange_cr
- 
+
 !-----------------------------------------------
 !-----------------------------------------------
 subroutine GetVel
@@ -770,7 +770,7 @@ real (REAL_KIND) :: D_matrix(3,3),JJ,u_total(3)!, velocity_vec(3,1)
 		call mapper(ND,Nvert,elem_vertices,coordPhy,coordref)
 		cell_in_reference(i,:) = coordref(1:3)
 	enddo
-	
+
 	!write(nflog,*)
 	!call logger('Done transfer to reference element')
 !--------------------------------------------------
@@ -1167,21 +1167,26 @@ end subroutine
 
 
 !-----------------------------------------------
-! GB to check velocity distribution
+! GB to check velocity distribution 
 !-----------------------------------------------
-subroutine getPointVel(p,v)
+subroutine getPointVel(p,v,e)
 real (REAL_KIND) :: p(3), v(3)
+integer :: e
 real (REAL_KIND) :: elem_vertices(8,3), fsum(3)
 integer, allocatable :: cell_elem(:)
 real (REAL_KIND) :: cell_in_reference(3)
 real (REAL_KIND) :: coordPhy(3), coordref(3)
-integer :: elem_nodes(8), j, k, e, II(6), signum(6), ND, Nvert
+integer :: elem_nodes(8), j, k, II(6), signum(6), ND, Nvert
 real (REAL_KIND) :: xhat, yhat, zhat, Uhat(6)
 real (REAL_KIND) :: uhat_x, uhat_y, uhat_z, x_corners(8,3)
 real (REAL_KIND) :: D_matrix(3,3),JJ,u_total(3)
 
 ! transfer cell position from physical to the reference elements:
 call getPointElement(p,e)
+if (e == 0) then
+	v = 0
+	return
+endif
 ND = 3
 Nvert = 8
 elem_nodes(:) = Cylinder_ELEMENT(e,:)
@@ -1292,27 +1297,71 @@ end subroutine
 !---------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------
 subroutine test_getPointVel
-real(REAL_KIND) :: p(3), v(3)
+real(REAL_KIND) :: p(3), v(3), p0(3), dxyz(8,3), delta
+integer :: i, k, e, node(8), nd, ix, iy, iz
+logical :: use_simple = .true.
 
-do
-	write(*,*) 'Enter p (x,y,z):'
-	read(*,*) p
-	if (p(3) == 0) stop
-	call getPointVel(p,v)
-	write(*,'(a,3e12.3)') 'Vel: ',v
+delta = 0.01
+i = 0
+do ix = -1,1,2
+do iy = -1,1,2
+do iz = -1,1,2
+	i = i+1
+	dxyz(i,:) = delta*[ix, iy, iz]
 enddo
-end subroutine
+enddo
+enddo
+if (use_simple) then
+	do
+		write(*,*) 'Enter p (x,y,z):'
+		read(*,*) p
+		if (p(3) == 0) stop
+		call getPointVel(p,v,e)
+		if (e == 0) then
+			write(*,*) 'Outside mesh, e = 0'
+			cycle
+		endif
+		write(*,'(a,3e12.3)') 'Vel: ',v
+		
+		node = cylinder_element(e,:)
+		write(*,'(a,i6,a,8i6)') 'p is in element: ',e,' with nodes: ',node
+		do k = 1,8
+			nd = node(k)
+			p0 = cylinder_vertices(nd,:)
+			write(*,'(a,3i8,3f10.2)') 'element, k, node, p0: ',e,k,nd,p0
+		enddo
+		
+	enddo
+else
+	p = [-180, 0, 900]
+	call getPointElement(p,e)
+	node = cylinder_element(e,:)
+	write(*,'(a,3f10.2)') 'point p: ',p
+	write(*,'(a,i6,a,8i6)') 'p is in element: ',e,' with nodes: ',node
+	do k = 1,8
+		nd = node(k)
+		p0 = cylinder_vertices(nd,:)
+		write(*,'(a,3i8,3f10.2)') 'element, k, node, p0: ',e,k,nd,p0
+		do i = 1,8
+			p = p0 + dxyz(i,:)
+			call getPointVel(p,v,e)
+			write(*,'(a,i8,3f10.2,3x,3f10.1)') 'e,p,v: ',e,p,v
+		enddo
+	enddo
+endif
+stop
 
+end subroutine
 !---------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------
-subroutine makeVelDist(z) 
+subroutine makeVelDist(z)
 real(REAL_KIND) :: z
 
 real(REAL_KIND) :: x, y, r, p(3), delta
 real(REAL_KIND), allocatable :: v(:,:,:)
-integer :: ix, iy, i
+integer :: ix, iy, i, e
 
-delta = 1.0
+delta = 0.5
 allocate(v(-200:200,-200:200,3))
 do ix = -200,200
 	write(*,*) 'ix: ',ix
@@ -1324,7 +1373,10 @@ do ix = -200,200
 			v(ix,iy,:) = 0
 		else
 			p = [x, y, z]
-			call getPointVel(p,v(ix,iy,:))
+			call getPointVel(p,v(ix,iy,:),e)
+			if (e == 0) then
+				v(ix,iy,:) = 0
+			endif
 		endif
 	enddo
 enddo
@@ -1345,7 +1397,7 @@ enddo
 close(nfvel)
 deallocate(v)
 stop
-			
+
 end subroutine
 
 end module
