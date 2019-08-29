@@ -212,7 +212,7 @@ end subroutine
 ! Compute the residual, r = Ax-b, its max-norm, and print the max-norm
 ! Note that A is zero-based.
 !=======================================================================
-subroutine resid (n, Ap, Ai, Ax, x, b, r)
+subroutine resid_umf (n, Ap, Ai, Ax, x, b, r)
 integer :: n, Ap(:), Ai(:), j, i, p
 double precision :: Ax(:), x(:), b(:), r(:), rmax, aij
 

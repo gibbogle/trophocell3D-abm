@@ -347,9 +347,9 @@ if (Ncells == 0) then
 	res = 1
 	return
 endif
-if (nocells) then
-	write(*,*) 'SIMULATING NOCELLS CASE TO TEST VELOCITY FIELD GENERATION!!!'
-	write(nflog,*) 'SIMULATING NOCELLS CASE TO TEST VELOCITY FIELD GENERATION!!!'
+if (no_cells) then
+	write(*,*) 'SIMULATING no_cells CASE TO TEST VELOCITY FIELD GENERATION!!!'
+	write(nflog,*) 'SIMULATING no_cells CASE TO TEST VELOCITY FIELD GENERATION!!!'
 	nlist = 0
 	ncells = 0
 endif
@@ -389,9 +389,13 @@ if (.not.calibration_run) then
 	call FEsolve
 	call logger('Done FEsolve')
 !	call test_getPointVel
-!	call makeVelDist(500.d0)
 	call GetVel
 endif
+
+if (no_cells) then
+	call makeVelDist(100.d0,100.d0,500.d0)
+endif
+
 call update_all_nbrlists
 
 t_fmover = 0
@@ -789,6 +793,7 @@ real (REAL_KIND) :: vertix_vec(8)
 	call readKfile(NODES,ELEMENT)
 	nel = size(ELEMENT,1)
 
+#if 0
 	allocate(ELEMENT2(size(ELEMENT,1),8))
 	do e=1,size(ELEMENT,1)
 		if (e<=1800 .OR. e>2700) then
@@ -812,6 +817,8 @@ real (REAL_KIND) :: vertix_vec(8)
 		endif
 	enddo
 	ELEMENT=ELEMENT2
+#endif
+
 	!print *, "number of elements=", nel
 	row_size=size(InternalFaces,1)+size(INLET,1)+&
 					size(OUTLET,1)+size(WALLs,1)

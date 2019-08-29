@@ -39,8 +39,8 @@ enddo
 
 end subroutine
 
-!------------------------------------------
-!------------------------------------------
+!----------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 subroutine sparseMatrices(nel,element2face,All_Surfaces,k,A, IA, JA)
 
 integer :: nel
@@ -257,7 +257,7 @@ end function
 !-------------------------------------------------
 subroutine FEsolve
 integer :: unit_x,unit_y,unit_z
-integer :: i, j, k, e,  count_empty, count1
+integer :: i, j, k, e,  count_empty, count1, nnz
 real (REAL_KIND) :: k_empty, cell_radius
 type(element_type) :: EP
 type(element_type) :: EPm
@@ -372,7 +372,7 @@ do i=1,EPm%nel
         cellcount_onedge_elem(i)/3.*Pi*cell_radius**3+ & !if elements are on an edge then they are shared between 4 elements
         cellcount_oncorner_elem(i)*4./(8.*3.)*Pi*cell_radius**3)&
 		/(EPm%volume*EPm%vol_fraction(i)) !corner elements are shared between 8 elements, corner edge by 4
-	if (nocells) vol_ratio(i) = 0
+	if (no_cells) vol_ratio(i) = 0
 
 	if (vol_ratio(i)==0.0D+00) then
        k_conduct(i) = k_empty
@@ -510,6 +510,14 @@ enddo
 !close(out_unit)
 !print *, "", count1
 !print *, "FreeFaces=", FreeFaces(1:10)
+nnz = size(AMatrix)
+write(*,*) 'size(FreeFaces), count1, nnz: ',size(FreeFaces), count1, nnz
+do k = 1,nnz
+	if (AMatrix(k) == 0) then
+		write(*,*) 'Zero value in AMatrix at: ',k
+		stop
+	endif
+enddo
 call solver(AMatrix,IAMatrix,JAMatrix,BodyForce,Q_P,&
 FreeFaces,size(FreeFaces), count1)
  !do i=1,nofaces+NofElements
@@ -521,6 +529,7 @@ end subroutine
 
 !---------------------------------------------------------------
 ! we solve to get the answers for x(Freeface) =A(Freeface,Freeface)\b(FreeFace)
+! n = nz = number of non-zero entries
 !---------------------------------------------------------------
 subroutine solver(A,IA,JA,BForce,QP,FFace,sizeFFace,n)
 
@@ -531,7 +540,7 @@ real(REAL_KIND) :: solution(sizeFFace), residual(sizeFFace)
 real(REAL_KIND) :: out_vel1, DV_velocity, ave_outflow_veloc
 integer :: IA(:),JA(:), NewIA(n), NewJA(n)
 integer :: rowcount, columncount!, DV_Number(size(DCOutlet))
-integer :: isolve_mode, nnz
+integer :: isolve_mode, nnz, M
 real(4) :: t1, t2
 
 real(REAL_KIND) :: BForce(:), QP(:), newBForce(sizeFFace)
@@ -539,9 +548,7 @@ real(REAL_KIND) :: newQP(sizeFFace), Ax(sizeFFace)
 
 integer, allocatable :: Ap_save(:), Ai_save(:)
 real(8), allocatable :: Ax_save(:)
-
-!integer, parameter :: out_unit=20
-
+logical :: use_umf_solver = .false.
 
 allocate(Ap_save(sizeFFace+1))
 allocate(Ai_save(n))
@@ -558,9 +565,8 @@ do i = 1, sizeFFace
 				if (JA(j)==FFace(k)) then
 					count1 = count1+1
 					NewA(count1) = A(j)
-					NewIA(count1) = rowcount !IA(j)
-					NewJA(count1) = k !JA(j)
-					!write (out_unit,*) NewA(count1),NewIA(count1),NewJA(count1)
+					NewIA(count1) = rowcount 	!IA(j)
+					NewJA(count1) = k 			!JA(j)
 				endif
 			enddo
 		endif
@@ -568,7 +574,6 @@ do i = 1, sizeFFace
 	newBForce(i) = BForce(FFace(i))
 	newQP(i) = QP(FFace(i))
 enddo
-
 
    call coocsr (sizeFFace,size(NEWA(:)),NewA,NEWIA,NEWJA,ao,jao,iao )
    !write (out_unit,*) " New A=",ao
@@ -591,59 +596,85 @@ enddo
 !do i=1,size(NEWA(:))
  !   write (out_unit,*) acsc(i)
 !enddo
-!----------------------------------------------------------------
-! convert from 1-based to 0-based
-!----------------------------------------------------------------
-do j = 1, sizeFFace+1
-	col_ptr(j) = col_ptr(j) - 1
+
+! At this point the non-zero entries are stored in compressed sparse column format (1-based arrays):
+!	acsc(nnz)
+!	col_ptr(M+1)
+!	row_ind(nnz)
+! where
+!	M = order of stiffness matrix = size(NEWA)
+!	nnz = count of non-zero entries
+! This is also called Harwell/Boeing format (HB)
+
+M = sizeFFace
+nnz = count1
+!call writeHB(M,nnz,col_ptr,row_ind,acsc,newBForce)
+
+if (use_umf_solver) then
+
+#if 0
+	!========== start umf solver=============================
+	isolve_mode = SOLVE_NO_ITERATION
+	call cpu_time(t1)
+	call solve_umf(isolve_mode, M, col_ptr, row_ind, acsc, newBForce, solution)
+!	write(nflog,*) 'solver_harwell_umf: M, nnz: ',M, nnz, size(NewA)
+!	call solve_harwell_umf(M, nnz, acsc, row_ind, col_ptr, newBForce, solution)
+	call cpu_time(t2)
+	write(*,'(a,f8.1)') 'Solve time (sec): ',t2-t1
+
+	! print the residual.
+	call resid1 (M, col_ptr, row_ind, acsc,  solution, newBForce, residual)
+	!========== end umf solver=============================
+#endif
+
+else
+	!----------------------------------------------------------------
+	! convert from 1-based to 0-based
+	!----------------------------------------------------------------
+	do j = 1, sizeFFace+1
+		col_ptr(j) = col_ptr(j) - 1
+	enddo
+	do p = 1, size(NEWA(:))
+		row_ind(p) = row_ind(p) - 1
+	enddo
+
+	!========== start slu solver=============================
+	solution= newBForce
+	Ap_save = col_ptr
+	Ai_save = row_ind
+	Ax_save = acsc
+	call cpu_time(t1)
+	!n = sizeFFace
+	!nnz = size(NewA)
+	!write(nflog,*) 'n,nnz: ',n,nnz
+	!write(nflog,*) 'col_ptr'
+	!write(nflog,'(11i7)') col_ptr
+	!write(nflog,*) 'row_ind'
+	!write(nflog,'(11i7)') row_ind
+	!write(nflog,*) 'acsc (nzvals)'
+	!write(nflog,'(5e15.8)') NewA
+	!write(nflog,*) 'rhs'
+	!write(nflog,'(5e14.5)') solution
+
+	write(nflog,*) 'slu_solver: M, nnz: ',M, nnz, size(NewA)
+	call slu_solve(4, sizeFFace, size(NewA(:)), acsc, row_ind, col_ptr, solution);
+	!!UMF call solve(isolve_mode, n, Ap, Ai, Ax, b, x)
+	call cpu_time(t2)
+	write(logmsg,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
+	call logger(logmsg)
+	!write(nflog,*) 'solution'
+	!write(nflog,'(5e14.5)') solution
+
+	!! print the residual.
+	!write(*,*) 'After solve, residual:'
+	call resid0 (sizeFFace, Ap_save, Ai_save, Ax_save, solution, newBForce, residual)
+	!========== end slu solver=============================
+endif
+
+write(nflog,*) 'Solution:'
+do i = 1,M
+	write(nflog,'(i8,e12.3)') i,solution(i)
 enddo
-do p = 1, size(NEWA(:))
-	row_ind(p) = row_ind(p) - 1
-enddo
-!========== start umf solver=============================
-!isolve_mode = SOLVE_NO_ITERATION
-!call cpu_time(t1)
-!call solve_umf(isolve_mode, sizeFFace, col_ptr, row_ind, acsc, newBForce, solution)
-!call cpu_time(t2)
-!write(*,'(a,f8.1)') 'Solve time (sec): ',t2-t1
-
-
-!! print the residual.
-!call resid (sizeFFace, col_ptr, row_ind, acsc,  solution, newBForce, residual)
-!========== end umf solver=============================
-
-
-!========== start slu solver=============================
-solution= newBForce
-Ap_save = col_ptr
-Ai_save = row_ind
-Ax_save = acsc
-call cpu_time(t1)
-n = sizeFFace
-nnz = size(NewA)
-!write(nflog,*) 'n,nnz: ',n,nnz
-!write(nflog,*) 'col_ptr'
-!write(nflog,'(11i7)') col_ptr
-!write(nflog,*) 'row_ind'
-!write(nflog,'(11i7)') row_ind
-!write(nflog,*) 'acsc (nzvals)'
-!write(nflog,'(5e15.8)') NewA
-!write(nflog,*) 'rhs'
-!write(nflog,'(5e14.5)') solution
-
-!!write(*,*)
-call slu_solve(4, sizeFFace, size(NewA(:)), acsc, row_ind, col_ptr, solution);
-!!UMF call solve(isolve_mode, n, Ap, Ai, Ax, b, x)
-call cpu_time(t2)
-write(logmsg,'(a,f8.1)') 'Solve time (cpu_time/nprocs) (sec): ',(t2-t1)/4
-call logger(logmsg)
-!write(nflog,*) 'solution'
-!write(nflog,'(5e14.5)') solution
-
-!! print the residual.
-!write(*,*) 'After solve, residual:'
-call resid (sizeFFace, Ap_save, Ai_save, Ax_save, solution, newBForce, residual)
-!========== end slu solver=============================
 
    newQP = solution
    !******check error of x compare to b********
@@ -1139,19 +1170,55 @@ END FUNCTION FindDet
 !=======================================================================
 !== resid ==============================================================
 ! Compute the residual, r = Ax-b, its max component and norm.
-! Note that A is zero-based.
+! Note that this assumes that A is zero-based.
 !=======================================================================
-subroutine resid (n, Ap, Ai, Ax, x, b, r)
-integer :: n, Ap(:), Ai(:), j, i, p
+subroutine resid0 (n, Ap, Ai, Ax, x, b, r)
+integer :: n, Ap(:), Ai(:), j, i, p, k, row, col
 double precision :: Ax(:), x(:), b(:), r(:), rmax, rnorm, aij
 
 r(1:n) = -b(1:n)
 
-do j = 1,n
-	do p = Ap(j) + 1, Ap(j+1)
-		i = Ai(p) + 1
-		aij = Ax(p)
-		r(i) = r(i) + aij * x(j)
+k = 0
+do col = 1,n
+!	do p = Ap(j) + 1, Ap(j+1)
+!		i = Ai(p) + 1
+!		aij = Ax(p)
+!		r(i) = r(i) + aij * x(j)
+	do p = 1, Ap(col+1) - Ap(col)
+		k = k+1
+		row = Ai(k) + 1
+		aij = Ax(k)
+		r(row) = r(row) + aij * x(col)
+	enddo
+enddo
+rmax = 0
+rnorm = 0
+do i = 1, n
+	rmax = max(rmax, r(i))
+	rnorm = rnorm + r(i)*r(i)
+enddo
+rnorm = sqrt(rnorm)
+write(logmsg,'(a,2e12.3)') 'Residual (A*x-b): rmax, rnorm: ', rmax, rnorm
+call logger(logmsg)
+end subroutine
+
+!== resid1 ==============================================================
+! Compute the residual, r = Ax-b, its max component and norm.
+! Note that this assumes that A is one-based.
+!=======================================================================
+subroutine resid1 (n, Ap, Ai, Ax, x, b, r)
+integer :: n, Ap(:), Ai(:), j, i, p, k, row, col
+double precision :: Ax(:), x(:), b(:), r(:), rmax, rnorm, aij
+
+r(1:n) = -b(1:n)
+
+k = 0
+do col = 1,n
+	do p = 1, Ap(col+1) - Ap(col)
+		k = k+1
+		row = Ai(k)
+		aij = Ax(k)
+		r(row) = r(row) + aij * x(col)
 	enddo
 enddo
 rmax = 0
@@ -1167,7 +1234,7 @@ end subroutine
 
 
 !-----------------------------------------------
-! GB to check velocity distribution 
+! GB to check velocity distribution
 !-----------------------------------------------
 subroutine getPointVel(p,v,e)
 real (REAL_KIND) :: p(3), v(3)
@@ -1322,7 +1389,7 @@ if (use_simple) then
 			cycle
 		endif
 		write(*,'(a,3e12.3)') 'Vel: ',v
-		
+
 		node = cylinder_element(e,:)
 		write(*,'(a,i6,a,8i6)') 'p is in element: ',e,' with nodes: ',node
 		do k = 1,8
@@ -1330,7 +1397,7 @@ if (use_simple) then
 			p0 = cylinder_vertices(nd,:)
 			write(*,'(a,3i8,3f10.2)') 'element, k, node, p0: ',e,k,nd,p0
 		enddo
-		
+
 	enddo
 else
 	p = [-180, 0, 900]
@@ -1354,13 +1421,14 @@ stop
 end subroutine
 !---------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------
-subroutine makeVelDist(z)
-real(REAL_KIND) :: z
+subroutine makeVelDist(x0,y0,z0)
+real(REAL_KIND) :: x0, y0, z0
 
-real(REAL_KIND) :: x, y, r, p(3), delta
+real(REAL_KIND) :: x, y, z, r, p(3), delta, vv(3)
 real(REAL_KIND), allocatable :: v(:,:,:)
-integer :: ix, iy, i, e
+integer :: ix, iy, iz, i, e
 
+write(*,*) 'makeVelDist: writing to velocity.dat'
 delta = 0.5
 allocate(v(-200:200,-200:200,3))
 do ix = -200,200
@@ -1372,7 +1440,7 @@ do ix = -200,200
 		if (r > 200 - delta) then
 			v(ix,iy,:) = 0
 		else
-			p = [x, y, z]
+			p = [x, y, z0]
 			call getPointVel(p,v(ix,iy,:),e)
 			if (e == 0) then
 				v(ix,iy,:) = 0
@@ -1381,7 +1449,7 @@ do ix = -200,200
 	enddo
 enddo
 open(nfvel,file='velocity.dat',status='replace')
-write(nfvel,'(a,f8.1)') 'z = ',z
+write(nfvel,'(a,f8.1)') 'z = ',z0
 do i = 1,3
 	if (i == 1) then
 		write(nfvel,*) 'v_x'
@@ -1394,10 +1462,146 @@ do i = 1,3
 		write(nfvel,'(401f9.1)') v(ix,:,i)
 	enddo
 enddo
-close(nfvel)
 deallocate(v)
+
+write(nfvel,*)
+x = 0
+y = 0
+write(nfvel,'(a,2f8.1,a)') 'velocity at: ',x0,y0,' over range of z'
+do iz = 0,1000
+	z = iz
+	p = [x0, y0, z]
+	call getPointVel(p,vv,e)
+	if (e == 0) then
+		vv = 0
+	endif
+	write(nfvel,'(f8.1,2x,3f9.1)') z,vv
+enddo
+close(nfvel)
 stop
 
 end subroutine
+
+#if 0
+!---------------------------------------------------------------------------------
+! Stiffness matrix is MxM, with ne non-zero entries.
+! A, row_ind, col_ptr is CSC (compressed spare column) format of stiffness matrix
+! MR1 = Maximum number of equations = 21000
+!---------------------------------------------------------------------------------
+subroutine solve_harwell_umf(M, ne, A, row_ind, col_ptr, rhs, solution)
+real(REAL_KIND) :: A(:), rhs(:), solution(:)
+integer :: M, ne, row_ind(:), col_ptr(:)
+
+!PARAMETER (LINDEX=2500000,LVALUE=7500000,NNZC=700000)
+!REAL(4) SEQ(LVALUE),UWORK(4*MR1),X(MR1)
+real(4), allocatable :: SEQ(:), UWORK(:), X(:), R1(:)
+real(4) :: CNTL(10),RINFO(20)	!,RTM(MR1)
+
+INTEGER INFO(40),ICNTL(20),KEEP(20)
+!integer ICOL(MR1+1), IROW(NNZC),IWORK(LINDEX)	!IDST(30),JDST(30),
+integer, allocatable :: IWORK(:)
+
+integer :: row, col, k, j, MR1, LINDEX, LVALUE, I
+
+MR1 = 2*M
+LINDEX = 10*ne + 2*M + 1	! 3*ne+2*n+1
+LVALUE = 200*ne		! 2*ne
+!NSZF = n
+write(*,*) 'solve_harwell_umf: M, ne: ',M,ne
+write(*,*) 'LINDEX, LVALUE: ',LINDEX, LVALUE
+
+allocate(SEQ(LVALUE))
+allocate(UWORK(4*MR1))
+allocate(X(MR1))
+allocate(R1(MR1))
+allocate(IWORK(LINDEX))
+
+CALL UMS2IN(ICNTL,CNTL,KEEP)
+
+ICNTL(4)=0
+ICNTL(6)=1
+ICNTL(7)=32
+
+! Need to convert from CSC to sparse triplet format
+k = 0
+col = 1
+do
+	do j = 1,col_ptr(col+1) - col_ptr(col)
+		k = k+1
+		SEQ(k) = A(k)
+		row = row_ind(k)
+		IWORK(k) = row
+		IWORK(k+ne) = col
+	enddo
+	col = col+1
+	if (col > M) exit
+enddo
+
+!do k = 1,ne
+!	write(nflog,'(2i8,e12.3)') iwork(k),iwork(k+ne),seq(k)
+!enddo
+
+do i = 1,M
+	R1(i) = rhs(i)		! convert real(8) to real(4)
+enddo
+
+write(*,*) 'call UMS2FA'
+CALL UMS2FA(M, ne, 0, .FALSE., LVALUE, LINDEX, SEQ, IWORK, KEEP, CNTL, ICNTL, INFO, RINFO)
+
+WRITE(*,*) 'LINDEX - DIM: ",LINDEX," REQ: ',INFO(18)
+WRITE(*,*) 'LVALUE - DIM: ",LVALUE," REQ: ',INFO(20)
+
+IF(INFO(1) .NE. 0) THEN
+	WRITE(*,*) 'ERROR IN FACTORIZATION: ',INFO(1)
+	STOP
+ENDIF
+
+write(*,*) 'call UMS2SO'
+CALL UMS2SO(M, 0, .FALSE., LVALUE, LINDEX, SEQ, IWORK, KEEP, R1, X, UWORK, CNTL, ICNTL, INFO, RINFO)
+
+IF(INFO(1) .NE. 0) THEN
+	WRITE(*,*) 'ERROR IN SOLVE: ',INFO(1)
+	STOP
+ENDIF
+
+write(*,*) 'solution:'
+DO I = 1,M
+!	R1(I) = X(I)
+	solution(I) = X(I)
+	write(nflog,'(i6,e12.3)') I,solution(I)
+ENDDO
+
+deallocate(SEQ)
+deallocate(UWORK)
+deallocate(X)
+deallocate(R1)
+deallocate(IWORK)
+
+end subroutine
+
+#endif
+
+!--------------------------------------------------------------------------------------
+! Save the CSC format stiffness matrix and the rhs.
+!--------------------------------------------------------------------------------------
+subroutine writeHB(M,nnz,col_ptr,row_ind,A,rhs)
+integer :: M, nnz, col_ptr(:), row_ind(:)
+real(REAL_KIND) :: A(:), rhs(:)
+integer, parameter :: nfhb=30, nfrhs=31
+
+open(nfhb,file='HB.dat',status='replace')
+write(nfhb,*) 'M, nnz: ',M,nnz
+write(nfhb,'(11i7)') col_ptr
+write(nfhb,'(11i7)') row_ind
+write(nfhb,'(5e16.8)') A
+close(nfhb)
+
+open(nfrhs,file='RHS.dat',status='replace')
+write(nfrhs,'(5e16.8)') rhs
+close(nfrhs)
+
+stop
+end subroutine
+
 
 end module
