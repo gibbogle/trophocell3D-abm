@@ -23,7 +23,7 @@
 				<Linker>
 					<Add option="-lgomp" />
 					<Add library=".\libpdlinsol.a" />
-					<Add library=".\libgomp.a" />
+					<Add library="..\..\testing\umfpack\umflib\Release\libumf.a" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="cyg-vsvars32-vs10.bat" />
@@ -129,6 +129,10 @@
 		<Unit filename="../src/tropho3D_main.f90">
 			<Option weight="6" />
 			<Option target="main" />
+		</Unit>
+		<Unit filename="../src/umf_solver.f90">
+			<Option weight="0" />
+			<Option target="DLL" />
 		</Unit>
 		<Extensions>
 			<code_completion />
